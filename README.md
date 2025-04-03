@@ -6,8 +6,33 @@ CREALINK est une plateforme innovante qui met en relation les créateurs de cont
 
 Le projet est divisé en deux parties principales :
 
-- **Backend** : API REST développée avec Node.js, Express et MongoDB
-- **Frontend** : Interface utilisateur développée avec [Lovable](https://lovable.dev/)
+- **Backend** : API REST développée avec Node.js, Express et Firebase
+- **Frontend** : Interface utilisateur développée avec React, Vite, TypeScript et Tailwind CSS
+
+## Configuration Firebase
+
+Le projet utilise Firebase pour l'authentification, le stockage de données et la gestion de base de données. Pour configurer Firebase :
+
+1. Créez un projet sur [Firebase Console](https://console.firebase.google.com/)
+2. Activez l'authentification par email/mot de passe
+3. Créez une base de données Firestore
+4. Configurez les règles de sécurité pour Firestore
+5. Activez le stockage Firebase
+6. Pour le frontend, créez un fichier `.env` dans le dossier frontend avec les variables suivantes :
+
+```
+VITE_FIREBASE_API_KEY=votre_api_key
+VITE_FIREBASE_AUTH_DOMAIN=votre_auth_domain
+VITE_FIREBASE_PROJECT_ID=votre_project_id
+VITE_FIREBASE_STORAGE_BUCKET=votre_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=votre_messaging_sender_id
+VITE_FIREBASE_APP_ID=votre_app_id
+VITE_API_URL=http://localhost:3000
+```
+
+7. Pour le backend, téléchargez le fichier de clé privée `serviceAccountKey.json` depuis les paramètres du projet Firebase (Project Settings > Service Accounts) et placez-le à la racine du dossier backend
+
+8. Créez un fichier `firestore.rules` dans le dossier backend pour définir les règles de sécurité de votre base de données
 
 ## Fonctionnalités principales
 
@@ -35,8 +60,8 @@ Le projet est divisé en deux parties principales :
 
 ### Prérequis
 - Node.js (v16 ou supérieur)
-- MongoDB
 - npm ou yarn
+- Compte Firebase avec projet configuré
 
 ### Backend
 
@@ -47,31 +72,68 @@ cd backend
 # Installer les dépendances
 npm install
 
-# Configurer les variables d'environnement
-cp .env.example .env
-# Puis éditer le fichier .env avec vos propres valeurs
+# Configurer Firebase
+# 1. Placer le fichier serviceAccountKey.json à la racine du dossier backend
+# 2. Configurer les règles Firestore dans firestore.rules
 
 # Démarrer le serveur en mode développement
 npm run dev
 ```
 
-### Frontend (avec Lovable)
+### Frontend
 
-Pour le frontend, nous utilisons [Lovable](https://lovable.dev/) comme framework. Veuillez suivre leur documentation pour l'installation et la configuration.
+```bash
+# Se placer dans le répertoire frontend
+cd frontend
+
+# Installer les dépendances
+npm install
+
+# Configurer les variables d'environnement Firebase
+# Créer un fichier .env avec les variables Firebase (voir section Configuration Firebase)
+
+# Démarrer le serveur en mode développement
+npm run dev
+```
+
+### Notes pour Windows (PowerShell)
+
+Dans PowerShell, n'utilisez pas l'opérateur `&&` pour chaîner les commandes. Utilisez plutôt le point-virgule `;` ou exécutez les commandes séparément :
+
+```powershell
+# Mauvaise pratique dans PowerShell
+cd frontend && npm run dev  # Ne fonctionnera pas
+
+# Bonnes pratiques dans PowerShell
+cd frontend; npm run dev    # Utiliser le point-virgule
+# Ou exécuter les commandes séparément
+cd frontend
+npm run dev
+```
 
 ## API Documentation
 
-L'API est accessible à l'adresse `http://localhost:5000/api/`.
+L'API est accessible à l'adresse `http://localhost:3000/api/`.
+
+### Authentification
+
+L'authentification est gérée via Firebase Authentication. Le backend s'intègre avec Firebase pour vérifier les jetons d'authentification.
 
 ### Routes principales
 
-- Authentification: `/api/auth` (inscription, connexion)
+- Authentification: `/api/auth` (vérification de token)
 - Utilisateurs: `/api/users` (profils, recherche)
 - Offres d'emploi: `/api/jobs` (publication, candidature)
-- Messages: `/api/messages` (conversations, messages)
-- Contrats: `/api/contracts` (création, validation, feedback)
+- Messages: `/api/messages` (conversations)
+- Contrats: `/api/contracts` (création, validation)
+
+### Accès aux données Firestore
+
+La plupart des opérations CRUD sont effectuées directement depuis le frontend via le SDK Firebase pour Web, avec des règles de sécurité Firestore définies dans le fichier `backend/firestore.rules`.
 
 ## Modèles de données
+
+Les données sont stockées dans Firebase Firestore avec la structure suivante :
 
 ### Utilisateur
 - Informations générales (nom, email, etc.)
@@ -86,12 +148,7 @@ L'API est accessible à l'adresse `http://localhost:5000/api/`.
 ### Conversation
 - Participants
 - Lien avec une offre d'emploi
-- Dernier message
-
-### Message
-- Texte
-- Pièces jointes
-- Statut de lecture
+- Messages
 
 ### Contrat
 - Détails du projet
