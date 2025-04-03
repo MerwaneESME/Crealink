@@ -1,50 +1,43 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const admin = require('firebase-admin');
 
-// Middleware pour vérifier l'authentification de l'utilisateur
-exports.authenticateUser = async (req, res, next) => {
+const authenticateUser = async (req, res, next) => {
   try {
-    // Récupérer le token du header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Token non fourni' });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
     if (!token) {
-      return res.status(401).json({ message: 'Authentification requise' });
+      return res.status(401).json({ error: 'Format de token invalide' });
     }
-    
-    // Vérifier le token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Trouver l'utilisateur
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({ message: 'Utilisateur non trouvé' });
+
+    // Vérifier le token avec Firebase
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = decodedToken;
+      next();
+    } catch (firebaseError) {
+      return res.status(401).json({ error: 'Token Firebase invalide' });
     }
-    
-    // Ajouter l'utilisateur à la requête
-    req.user = user;
-    req.token = token;
-    
-    next();
   } catch (error) {
-    console.error('Erreur d\'authentification:', error);
-    res.status(401).json({ message: 'Authentification invalide' });
+    res.status(500).json({ error: 'Erreur d\'authentification' });
   }
 };
 
 // Middleware pour vérifier le rôle de l'utilisateur
-exports.authorizeRoles = (...roles) => {
+const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: 'Authentification requise' });
+      return res.status(401).json({ error: 'Non authentifié' });
     }
-    
+
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `Le rôle ${req.user.role} n'est pas autorisé à accéder à cette ressource` 
-      });
+      return res.status(403).json({ error: 'Non autorisé' });
     }
-    
+
     next();
   };
-}; 
+};
+
+module.exports = { authenticateUser, authorizeRoles }; 
