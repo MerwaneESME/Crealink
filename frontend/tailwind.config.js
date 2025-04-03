@@ -9,9 +9,19 @@ export default {
       fontFamily: {
         sans: ['Poppins', 'sans-serif'],
       },
+      backgroundImage: {
+        'grid-pattern': "url('/images/grid-pattern.svg')",
+      },
       animation: {
         typing: 'typing 3.5s steps(40, end)',
         blink: 'blink-caret .75s step-end infinite',
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "float": "float 6s ease-in-out infinite",
+        "float-delayed": "float 8s ease-in-out infinite 1s",
+        "float-slow": "float 10s ease-in-out infinite 2s",
+        "float-reverse": "float-reverse 7s ease-in-out infinite",
       },
       keyframes: {
         typing: {
@@ -21,7 +31,23 @@ export default {
         'blink-caret': {
           'from, to': { borderColor: 'transparent' },
           '50%': { borderColor: 'rgb(236 72 153 / 0.5)' }
-        }
+        },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        'float-reverse': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(20px)' },
+        },
       },
       colors: {
         border: "hsl(var(--border))",

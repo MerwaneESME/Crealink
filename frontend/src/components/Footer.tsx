@@ -1,88 +1,79 @@
-import { Link } from "react-router-dom";
-import { Facebook, Twitter, Instagram, Youtube, Linkedin } from "lucide-react";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Facebook, Twitter, Instagram, Youtube, Github } from "lucide-react";
 
-const Footer = () => {
+export default function Footer() {
   return (
-    <footer className="bg-black/30 border-t border-white/5 pt-16 pb-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          <div>
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-crealink-purple to-crealink-pink flex items-center justify-center hover:shadow-[0_0_8px_rgba(97,18,217,0.3)] transition-shadow duration-300">
-                  <span className="font-bold text-white text-xs">CL</span>
-                </div>
-              </div>
-              <span className="text-2xl font-bold text-gradient">CREALINK</span>
+    <footer className="bg-black border-t border-purple-900/20">
+      {/* Effet de bordure néon en haut */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-20"></div>
+      
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="space-y-4">
+            <Link to="/" className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500 neon-text">
+              CREALINK
             </Link>
-            <p className="text-white/60 text-sm mb-6">
-              Connecter les créateurs et les experts pour créer du contenu exceptionnel.
+            <p className="text-gray-400 text-sm">
+              Connectez les créateurs aux experts dont ils ont besoin pour développer leur présence en ligne.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-white/60 hover:text-crealink-pink transition-colors">
-                <Facebook size={18} />
-              </a>
-              <a href="#" className="text-white/60 hover:text-crealink-pink transition-colors">
+            <div className="flex space-x-4 text-gray-400">
+              <a href="#" className="hover:text-purple-400 transition-colors">
                 <Twitter size={18} />
               </a>
-              <a href="#" className="text-white/60 hover:text-crealink-pink transition-colors">
+              <a href="#" className="hover:text-purple-400 transition-colors">
                 <Instagram size={18} />
               </a>
-              <a href="#" className="text-white/60 hover:text-crealink-pink transition-colors">
+              <a href="#" className="hover:text-purple-400 transition-colors">
                 <Youtube size={18} />
               </a>
-              <a href="#" className="text-white/60 hover:text-crealink-pink transition-colors">
-                <Linkedin size={18} />
+              <a href="#" className="hover:text-purple-400 transition-colors">
+                <Github size={18} />
               </a>
             </div>
           </div>
           
           <div>
-            <h3 className="text-white font-semibold mb-4">Liens Rapides</h3>
+            <h3 className="text-sm font-medium text-white mb-4">Explorer</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-white/60 hover:text-white transition-colors text-sm">
-                  Accueil
+                <Link to="/jobs" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Toutes les offres
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-white/60 hover:text-white transition-colors text-sm">
-                  À Propos
+                <Link to="/jobs?category=editeur" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Éditeurs vidéo
                 </Link>
               </li>
               <li>
-                <Link to="/jobs" className="text-white/60 hover:text-white transition-colors text-sm">
-                  Offres
+                <Link to="/jobs?category=graphiste" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Graphistes
                 </Link>
               </li>
               <li>
-                <Link to="/messages" className="text-white/60 hover:text-white transition-colors text-sm">
-                  Messagerie
+                <Link to="/jobs?category=developpeur" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Développeurs
                 </Link>
               </li>
             </ul>
           </div>
           
           <div>
-            <h3 className="text-white font-semibold mb-4">Rejoindre</h3>
+            <h3 className="text-sm font-medium text-white mb-4">Informations</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/signup" className="text-white/60 hover:text-white transition-colors text-sm">
-                  Pour les Créateurs
+                <Link to="/about" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  À propos
                 </Link>
               </li>
               <li>
-                <Link to="/signup" className="text-white/60 hover:text-white transition-colors text-sm">
-                  Pour les Experts
+                <Link to="/contact" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Contact
                 </Link>
               </li>
               <li>
-                <Link to="/pricing" className="text-white/60 hover:text-white transition-colors text-sm">
-                  Tarifs
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="text-white/60 hover:text-white transition-colors text-sm">
+                <Link to="/faq" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
                   FAQ
                 </Link>
               </li>
@@ -90,43 +81,27 @@ const Footer = () => {
           </div>
           
           <div>
-            <h3 className="text-white font-semibold mb-4">Contact</h3>
+            <h3 className="text-sm font-medium text-white mb-4">Légal</h3>
             <ul className="space-y-2">
-              <li className="text-white/60 text-sm">
-                info@crealink.com
+              <li>
+                <Link to="/cgu" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Conditions d'utilisation
+                </Link>
               </li>
-              <li className="text-white/60 text-sm">
-                Paris, France
+              <li>
+                <Link to="/privacy" className="text-gray-400 hover:text-purple-400 transition-colors text-sm">
+                  Politique de confidentialité
+                </Link>
               </li>
             </ul>
-            <div className="mt-6">
-              <Link to="/contact" className="text-sm font-medium text-gradient">
-                Contactez-nous →
-              </Link>
-            </div>
           </div>
         </div>
-        
-        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-white/50 text-sm">
-            © {new Date().getFullYear()} CREALINK. Tous droits réservés.
+        <div className="mt-12 border-t border-purple-900/20 pt-8">
+          <p className="text-gray-500 text-sm text-center">
+            &copy; {new Date().getFullYear()} CREALINK. Tous droits réservés.
           </p>
-          
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link to="/terms" className="text-white/50 hover:text-white text-sm">
-              Conditions d'utilisation
-            </Link>
-            <Link to="/privacy" className="text-white/50 hover:text-white text-sm">
-              Politique de confidentialité
-            </Link>
-            <Link to="/cookies" className="text-white/50 hover:text-white text-sm">
-              Cookies
-            </Link>
-          </div>
         </div>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

@@ -1,482 +1,406 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Send as SendIcon, MoreHorizontalIcon, PaperclipIcon, SmileIcon } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
-// Exemple de données pour les conversations
+// Types
 interface Message {
   id: string;
   senderId: string;
+  receiverId: string;
   content: string;
-  timestamp: string;
+  timestamp: any;
   read: boolean;
 }
 
-interface Conversation {
+interface Contact {
   id: string;
-  participants: {
-    id: string;
-    name: string;
-    avatar: string;
-    role: string;
-    online?: boolean;
-  }[];
-  lastMessage: {
-    content: string;
-    timestamp: string;
-    senderId: string;
-  };
-  jobTitle: string;
-  messages: Message[];
+  name: string;
+  avatar?: string;
+  lastMessage: string;
+  lastMessageDate: any;
   unreadCount: number;
 }
 
-// Utilisateur connecté pour l'exemple (simulation d'un utilisateur authentifié)
-const currentUser = {
-  id: 'user-1',
-  name: 'Admin',
-  role: 'admin',
-  avatar: ''
-};
-
-// Exemple de conversations
-const sampleConversations: Conversation[] = [
+// Données de test
+const sampleContacts: Contact[] = [
   {
-    id: 'conv-1',
-    participants: [
-      {
-        id: 'user-1',
-        name: 'Admin',
-        avatar: '',
-        role: 'admin',
-        online: true
-      },
-      {
-        id: 'user-2',
-        name: 'GameMaster',
-        avatar: '',
-        role: 'creator',
-        online: true
-      }
-    ],
-    lastMessage: {
-      content: "Merci pour l'acceptation de ma candidature ! Quand pourrions-nous commencer ?",
-      timestamp: '2025-03-27T14:30:00.000Z',
-      senderId: 'user-2'
-    },
-    jobTitle: 'Recherche monteur vidéo pour ma chaîne gaming',
-    messages: [
-      {
-        id: 'msg-1',
-        senderId: 'user-1',
-        content: "Bonjour, j'ai vu votre candidature pour le poste de monteur vidéo et je suis intéressé par votre profil.",
-        timestamp: '2025-03-27T10:15:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-2',
-        senderId: 'user-2',
-        content: "Bonjour ! Merci de votre retour. Je suis très enthousiaste à l'idée de travailler sur ce projet.",
-        timestamp: '2025-03-27T11:20:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-3',
-        senderId: 'user-1',
-        content: "J'ai décidé d'accepter votre candidature. Vos références et votre portfolio sont impressionnants.",
-        timestamp: '2025-03-27T13:45:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-4',
-        senderId: 'user-2',
-        content: "Merci pour l'acceptation de ma candidature ! Quand pourrions-nous commencer ?",
-        timestamp: '2025-03-27T14:30:00.000Z',
-        read: false
-      }
-    ],
-    unreadCount: 1
+    id: 'user1',
+    name: 'Thomas Martin',
+    avatar: '',
+    lastMessage: "J'ai pris connaissance de votre offre, je suis très intéressé !",
+    lastMessageDate: { seconds: Date.now() / 1000 - 1800 },
+    unreadCount: 2
   },
   {
-    id: 'conv-2',
-    participants: [
-      {
-        id: 'user-1',
-        name: 'Admin',
-        avatar: '',
-        role: 'admin',
-        online: true
-      },
-      {
-        id: 'user-3',
-        name: 'LifestyleQueen',
-        avatar: '',
-        role: 'creator',
-        online: false
-      }
-    ],
-    lastMessage: {
-      content: "Je vous envoie les détails concernant le style de miniatures que je recherche.",
-      timestamp: '2025-03-26T18:10:00.000Z',
-      senderId: 'user-3'
-    },
-    jobTitle: 'Expert en thumbnails pour chaîne lifestyle',
-    messages: [
-      {
-        id: 'msg-5',
-        senderId: 'user-3',
-        content: "Bonjour, suite à votre acceptation pour la création de miniatures, je voulais discuter du style que je recherche.",
-        timestamp: '2025-03-26T15:30:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-6',
-        senderId: 'user-1',
-        content: "Bonjour, je serais ravi d'en savoir plus sur vos préférences et le style que vous souhaitez pour vos miniatures.",
-        timestamp: '2025-03-26T16:15:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-7',
-        senderId: 'user-3',
-        content: "Je vous envoie les détails concernant le style de miniatures que je recherche.",
-        timestamp: '2025-03-26T18:10:00.000Z',
-        read: true
-      }
-    ],
+    id: 'user2',
+    name: 'Sophie Dubois',
+    avatar: '',
+    lastMessage: "Bonjour ! Est-ce que le projet est toujours d'actualité ?",
+    lastMessageDate: { seconds: Date.now() / 1000 - 86400 },
     unreadCount: 0
   },
   {
-    id: 'conv-3',
-    participants: [
-      {
-        id: 'user-1',
-        name: 'Admin',
-        avatar: '',
-        role: 'admin',
-        online: true
-      },
-      {
-        id: 'user-4',
-        name: 'VoiceProStudio',
-        avatar: '',
-        role: 'expert',
-        online: false
-      }
-    ],
-    lastMessage: {
-      content: "Je viens de terminer l'enregistrement du premier épisode. Vous pouvez le télécharger ici.",
-      timestamp: '2025-03-25T09:45:00.000Z',
-      senderId: 'user-4'
-    },
-    jobTitle: 'Voix-off pour documentaires éducatifs',
-    messages: [
-      {
-        id: 'msg-8',
-        senderId: 'user-1',
-        content: "Bonjour, j'aimerais discuter des détails concernant l'enregistrement des voix-off pour ma série de documentaires.",
-        timestamp: '2025-03-24T11:20:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-9',
-        senderId: 'user-4',
-        content: "Bonjour ! Je serais ravi de travailler sur ce projet. Pourriez-vous me donner plus de détails sur le ton et le style que vous recherchez ?",
-        timestamp: '2025-03-24T13:30:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-10',
-        senderId: 'user-1',
-        content: "Bien sûr. Je cherche un ton posé et professionnel, mais chaleureux. Je vous envoie le script du premier épisode.",
-        timestamp: '2025-03-24T14:15:00.000Z',
-        read: true
-      },
-      {
-        id: 'msg-11',
-        senderId: 'user-4',
-        content: "Je viens de terminer l'enregistrement du premier épisode. Vous pouvez le télécharger ici.",
-        timestamp: '2025-03-25T09:45:00.000Z',
-        read: false
-      }
-    ],
-    unreadCount: 1
+    id: 'user3',
+    name: 'Lucas Bernard',
+    avatar: '',
+    lastMessage: "Merci pour votre retour. Je vous envoie les fichiers demandés.",
+    lastMessageDate: { seconds: Date.now() / 1000 - 172800 },
+    unreadCount: 0
+  },
+  {
+    id: 'user4',
+    name: 'Emma Petit',
+    avatar: '',
+    lastMessage: "J'aimerais discuter du délai pour ce projet. Est-ce possible de l'étendre ?",
+    lastMessageDate: { seconds: Date.now() / 1000 - 259200 },
+    unreadCount: 0
   }
 ];
 
-const Messages = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+const sampleMessages: Record<string, Message[]> = {
+  user1: [
+    {
+      id: 'm1',
+      senderId: 'user1',
+      receiverId: 'currentUser',
+      content: "Bonjour, je suis intéressé par votre offre de montage vidéo.",
+      timestamp: { seconds: Date.now() / 1000 - 7200 },
+      read: true
+    },
+    {
+      id: 'm2',
+      senderId: 'currentUser',
+      receiverId: 'user1',
+      content: "Bonjour Thomas ! Merci pour votre intérêt. Avez-vous de l'expérience en montage de vidéos gaming ?",
+      timestamp: { seconds: Date.now() / 1000 - 3600 },
+      read: true
+    },
+    {
+      id: 'm3',
+      senderId: 'user1',
+      receiverId: 'currentUser',
+      content: "Oui, j'ai 3 ans d'expérience en montage de vidéos gaming, principalement pour des chaînes YouTube de jeux FPS et MOBA.",
+      timestamp: { seconds: Date.now() / 1000 - 3300 },
+      read: true
+    },
+    {
+      id: 'm4',
+      senderId: 'user1',
+      receiverId: 'currentUser',
+      content: "J'ai pris connaissance de votre offre, je suis très intéressé !",
+      timestamp: { seconds: Date.now() / 1000 - 1800 },
+      read: false
+    }
+  ],
+  user2: [
+    {
+      id: 'm5',
+      senderId: 'user2',
+      receiverId: 'currentUser',
+      content: "Bonjour ! Est-ce que le projet est toujours d'actualité ?",
+      timestamp: { seconds: Date.now() / 1000 - 86400 },
+      read: true
+    }
+  ],
+  user3: [
+    {
+      id: 'm6',
+      senderId: 'currentUser',
+      receiverId: 'user3',
+      content: "Bonjour Lucas, pourriez-vous m'envoyer des exemples de vos travaux précédents ?",
+      timestamp: { seconds: Date.now() / 1000 - 259200 },
+      read: true
+    },
+    {
+      id: 'm7',
+      senderId: 'user3',
+      receiverId: 'currentUser',
+      content: "Bonjour, bien sûr ! Voici le lien vers mon portfolio: https://portfolio-lucas.example.com",
+      timestamp: { seconds: Date.now() / 1000 - 172800 + 3600 },
+      read: true
+    },
+    {
+      id: 'm8',
+      senderId: 'currentUser',
+      receiverId: 'user3',
+      content: "Merci pour votre portfolio, j'aimerais voir plus spécifiquement vos travaux sur des projets similaires au mien.",
+      timestamp: { seconds: Date.now() / 1000 - 172800 + 7200 },
+      read: true
+    },
+    {
+      id: 'm9',
+      senderId: 'user3',
+      receiverId: 'currentUser',
+      content: "Merci pour votre retour. Je vous envoie les fichiers demandés.",
+      timestamp: { seconds: Date.now() / 1000 - 172800 },
+      read: true
+    }
+  ],
+  user4: [
+    {
+      id: 'm10',
+      senderId: 'user4',
+      receiverId: 'currentUser',
+      content: "J'aimerais discuter du délai pour ce projet. Est-ce possible de l'étendre ?",
+      timestamp: { seconds: Date.now() / 1000 - 259200 },
+      read: true
+    }
+  ]
+};
+
+export default function Messages() {
+  const { currentUser } = useAuth();
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selectedConversation) {
-      // Ne pas faire défiler automatiquement lors de la sélection d'une conversation
-      // Marquer les messages comme lus
-      const updatedConversations = conversations.map(conv => {
-        if (conv.id === selectedConversation.id) {
-          return {
-            ...conv,
-            unreadCount: 0,
-            messages: conv.messages.map(msg => ({
-              ...msg,
-              read: true
-            }))
-          };
-        }
-        return conv;
-      });
-      setConversations(updatedConversations);
+    // Simuler un chargement depuis Firebase
+    setLoading(true);
+    setTimeout(() => {
+      setContacts(sampleContacts);
+      setLoading(false);
+    }, 800);
+  }, []);
+
+  useEffect(() => {
+    if (selectedContact) {
+      setMessages(sampleMessages[selectedContact] || []);
+      scrollToBottom();
     }
-  }, [selectedConversation]);
+  }, [selectedContact]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation) return;
-
-    const newMsg: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: currentUser.id,
-      content: newMessage,
-      timestamp: new Date().toISOString(),
-      read: true
-    };
-
-    const updatedConversations = conversations.map(conv => {
-      if (conv.id === selectedConversation.id) {
-        return {
-          ...conv,
-          messages: [...conv.messages, newMsg],
-          lastMessage: {
-            content: newMessage,
-            timestamp: new Date().toISOString(),
-            senderId: currentUser.id
-          }
-        };
+  const handleContactSelect = (contactId: string) => {
+    setSelectedContact(contactId);
+    
+    // Marquer les messages comme lus
+    const updatedContacts = contacts.map(contact => {
+      if (contact.id === contactId) {
+        return { ...contact, unreadCount: 0 };
       }
-      return conv;
-    });
-
-    setConversations(updatedConversations);
-    setSelectedConversation(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        messages: [...prev.messages, newMsg],
-        lastMessage: {
-          content: newMessage,
-          timestamp: new Date().toISOString(),
-          senderId: currentUser.id
-        }
-      };
+      return contact;
     });
     
+    setContacts(updatedContacts);
+  };
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !selectedContact) return;
+    
+    const newMsg: Message = {
+      id: `new-${Date.now()}`,
+      senderId: 'currentUser',
+      receiverId: selectedContact,
+      content: newMessage,
+      timestamp: { seconds: Date.now() / 1000 },
+      read: false
+    };
+    
+    setMessages(prev => [...prev, newMsg]);
     setNewMessage('');
-    // Défiler vers le bas uniquement après l'envoi d'un message
-    setTimeout(scrollToBottom, 100);
+    scrollToBottom();
   };
 
-  const formatMessageDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return new Intl.DateTimeFormat('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
-  const formatConversationDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return new Intl.DateTimeFormat('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    } else if (date.toDateString() === yesterday.toDateString()) {
+  const formatMessageDate = (seconds: number) => {
+    const date = new Date(seconds * 1000);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
       return 'Hier';
+    } else if (diffDays < 7) {
+      return date.toLocaleDateString('fr-FR', { weekday: 'long' });
     } else {
-      return new Intl.DateTimeFormat('fr-FR', {
-        day: 'numeric',
-        month: 'short'
-      }).format(date);
+      return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
     }
   };
 
-  const getOtherParticipant = (conversation: Conversation) => {
-    return conversation.participants.find(p => p.id !== currentUser.id);
+  const formatContactDate = (seconds: number) => {
+    const date = new Date(seconds * 1000);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Hier';
+    } else {
+      return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Messages</h1>
       
-      <div className="flex-grow container mx-auto px-4 py-8 mt-16">
-        <h1 className="text-3xl font-bold mb-6">Messages</h1>
-        
-        <div className="flex flex-col md:flex-row h-[calc(100vh-240px)] gap-4 rounded-lg shadow-md overflow-hidden border border-purple-500/30 bg-gradient-to-br from-background via-purple-950/20 to-pink-950/20 backdrop-blur-sm">
-          {/* Liste des conversations */}
-          <div className="md:w-1/3 border-r border-purple-500/30">
-            <div className="p-4 border-b border-purple-500/30 bg-purple-500/10">
-              <h2 className="font-semibold text-lg">Conversations</h2>
-            </div>
+      <Card className="shadow-sm">
+        <div className="grid md:grid-cols-[300px_1fr] h-[600px]">
+          {/* Liste des contacts */}
+          <div className="border-r">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Conversations</CardTitle>
+            </CardHeader>
             
-            <div className="overflow-y-auto h-[calc(100%-4rem)] bg-background/30">
-              {conversations.map(conversation => {
-                const otherParticipant = getOtherParticipant(conversation);
-                return (
-                  <div 
-                    key={conversation.id}
-                    className={`p-4 hover:bg-purple-500/10 cursor-pointer border-b border-purple-500/20 ${selectedConversation?.id === conversation.id ? 'bg-purple-500/20' : ''}`}
-                    onClick={() => setSelectedConversation(conversation)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="relative">
-                        <Avatar>
-                          <AvatarImage src={otherParticipant?.avatar} />
-                          <AvatarFallback>{otherParticipant?.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        {otherParticipant?.online && (
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></span>
-                        )}
-                      </div>
+            {loading ? (
+              <div className="flex justify-center items-center h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="text-center p-6 text-gray-500">
+                <p>Aucune conversation à afficher</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[525px]">
+                <div className="flex flex-col">
+                  {contacts.map((contact) => (
+                    <button
+                      key={contact.id}
+                      className={`flex items-center p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800 relative ${
+                        selectedContact === contact.id ? 'bg-gray-100 dark:bg-gray-800' : ''
+                      }`}
+                      onClick={() => handleContactSelect(contact.id)}
+                    >
+                      <Avatar className="h-10 w-10 mr-3">
+                        <AvatarImage src={contact.avatar} alt={contact.name} />
+                        <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-semibold truncate">{otherParticipant?.name}</h3>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">{formatConversationDate(conversation.lastMessage.timestamp)}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium truncate">{contact.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {formatContactDate(contact.lastMessageDate.seconds)}
+                          </span>
                         </div>
-                        <p className="text-sm text-muted-foreground truncate mt-1">
-                          {conversation.lastMessage.senderId === currentUser.id ? 'Vous: ' : ''}{conversation.lastMessage.content}
-                        </p>
-                        <div className="mt-1">
-                          <p className="text-xs text-foreground/70 truncate italic">{conversation.jobTitle}</p>
-                        </div>
+                        <p className="text-sm text-gray-500 truncate">{contact.lastMessage}</p>
                       </div>
-                    </div>
-                    {conversation.unreadCount > 0 && (
-                      <div className="flex justify-end mt-1">
-                        <Badge variant="destructive" className="rounded-full px-2 text-xs">
-                          {conversation.unreadCount}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      {contact.unreadCount > 0 && (
+                        <span className="absolute top-3 right-3 flex items-center justify-center w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full">
+                          {contact.unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
           
           {/* Zone de messages */}
-          {selectedConversation ? (
-            <div className="flex-1 flex flex-col bg-background/50 backdrop-blur-sm">
-              {/* En-tête de conversation */}
-              <div className="p-4 border-b border-purple-500/30 flex items-center justify-between bg-purple-500/10">
-                <div className="flex items-center gap-3">
-                  {selectedConversation && getOtherParticipant(selectedConversation) && (
-                    <>
-                      <div className="relative">
-                        <Avatar>
-                          <AvatarImage src={getOtherParticipant(selectedConversation)?.avatar} />
-                          <AvatarFallback>{getOtherParticipant(selectedConversation)?.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        {getOtherParticipant(selectedConversation)?.online && (
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></span>
-                        )}
+          <div className="flex flex-col">
+            {selectedContact ? (
+              <>
+                <CardHeader className="py-3 border-b">
+                  <div className="flex items-center">
+                    <Avatar className="h-9 w-9 mr-2">
+                      <AvatarImage 
+                        src={contacts.find(c => c.id === selectedContact)?.avatar} 
+                        alt={contacts.find(c => c.id === selectedContact)?.name} 
+                      />
+                      <AvatarFallback>
+                        {getInitials(contacts.find(c => c.id === selectedContact)?.name || '')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <CardTitle className="text-base">
+                      {contacts.find(c => c.id === selectedContact)?.name}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${message.senderId === 'currentUser' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div 
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            message.senderId === 'currentUser' 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-gray-100 dark:bg-gray-800'
+                          }`}
+                        >
+                          <p>{message.content}</p>
+                          <p className={`text-xs mt-1 ${
+                            message.senderId === 'currentUser' 
+                              ? 'text-primary-foreground/80' 
+                              : 'text-gray-500'
+                          }`}>
+                            {formatMessageDate(message.timestamp.seconds)}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{getOtherParticipant(selectedConversation)?.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {getOtherParticipant(selectedConversation)?.online ? 'En ligne' : 'Hors ligne'}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontalIcon className="h-5 w-5" />
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+                
+                <div className="border-t p-3 flex items-center">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    placeholder="Écrivez votre message..."
+                    className="flex-1 mr-2"
+                  />
+                  <Button onClick={handleSendMessage} size="sm">
+                    Envoyer
                   </Button>
                 </div>
-              </div>
-              
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-gradient-to-br from-background/90 to-purple-950/5">
-                <div className="bg-gradient-to-r from-purple-600/30 to-pink-500/30 rounded-lg p-4 text-center mx-auto mb-4 border border-purple-500/20">
-                  <h4 className="font-semibold">{selectedConversation.jobTitle}</h4>
-                  <p className="text-sm text-muted-foreground">Début de votre conversation</p>
-                </div>
-                
-                {selectedConversation.messages.map(message => (
-                  <div 
-                    key={message.id} 
-                    className={`flex ${message.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                <div className="mb-4 w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-8 h-8 text-gray-500"
                   >
-                    <div 
-                      className={`max-w-[80%] ${
-                        message.senderId === currentUser.id 
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg shadow-md shadow-purple-500/20' 
-                          : 'bg-muted/30 text-foreground rounded-tl-lg rounded-tr-lg rounded-br-lg'
-                      } p-3`}
-                    >
-                      <p>{message.content}</p>
-                      <div className="flex justify-end mt-1">
-                        <span className="text-xs opacity-70">{formatMessageDate(message.timestamp)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-              
-              {/* Saisie de message */}
-              <form onSubmit={handleSendMessage} className="border-t border-purple-500/30 p-4 flex gap-2 bg-purple-950/15 backdrop-blur-sm">
-                <Button variant="outline" size="icon" type="button" className="bg-background/30 hover:bg-purple-500/30 border-purple-500/30">
-                  <PaperclipIcon className="h-5 w-5" />
-                </Button>
-                <Input 
-                  placeholder="Écrivez votre message..." 
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 bg-background/30 border-purple-500/30 placeholder:text-muted-foreground/50 focus-visible:ring-purple-500/50"
-                />
-                <Button variant="outline" size="icon" type="button" className="bg-background/30 hover:bg-purple-500/30 border-purple-500/30">
-                  <SmileIcon className="h-5 w-5" />
-                </Button>
-                <Button type="submit" className="bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 shadow-sm shadow-purple-500/20">
-                  <SendIcon className="h-5 w-5 mr-1" /> Envoyer
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center max-w-md">
-                <h3 className="text-xl font-semibold mb-2">Sélectionnez une conversation</h3>
-                <p className="text-muted-foreground">
-                  Choisissez une conversation dans la liste pour afficher les messages ou acceptez une offre d'emploi pour démarrer une nouvelle discussion.
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Vos messages</h3>
+                <p className="text-sm text-gray-500 max-w-md">
+                  Sélectionnez une conversation pour afficher les messages ou commencez une nouvelle discussion depuis les offres d'emploi.
                 </p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-      
-      <Footer />
+      </Card>
     </div>
   );
-};
-
-export default Messages; 
+} 
