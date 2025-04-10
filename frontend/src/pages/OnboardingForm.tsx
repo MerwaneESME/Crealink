@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { authService } from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Types pour les questions
@@ -25,7 +24,7 @@ interface Question {
 }
 
 export default function OnboardingForm() {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -172,7 +171,7 @@ export default function OnboardingForm() {
         skills: formData.skills ? formData.skills.split(',').map((skill: string) => skill.trim()).filter(Boolean) : []
       };
 
-      await authService.updateUserProfile(user.uid, userData);
+      await updateUserProfile(userData);
       navigate("/dashboard");
     } catch (error: any) {
       setError(error.message || "Une erreur est survenue");
@@ -259,7 +258,6 @@ export default function OnboardingForm() {
 
                 {currentQuestion.type === 'text' && (
                   <Input
-                    id={currentQuestion.id}
                     type="text"
                     placeholder={currentQuestion.placeholder}
                     value={formData[currentQuestion.id] || ""}
@@ -271,7 +269,6 @@ export default function OnboardingForm() {
 
                 {currentQuestion.type === 'textarea' && (
                   <Textarea
-                    id={currentQuestion.id}
                     placeholder={currentQuestion.placeholder}
                     value={formData[currentQuestion.id] || ""}
                     onChange={(e) => handleInputChange(e.target.value)}
@@ -282,32 +279,23 @@ export default function OnboardingForm() {
               </div>
             </CardContent>
 
-            <CardFooter className="flex justify-between space-x-4 pt-4">
-              {error && (
-                <div className="text-red-500 text-sm text-center w-full mb-4">
-                  {error}
-                </div>
-              )}
-              
-              <div className="flex justify-between w-full">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-purple-500/20 text-gray-300 hover:bg-purple-500/10"
-                  onClick={handleBack}
-                  disabled={currentStep === 0 || loading}
-                >
-                  Précédent
-                </Button>
-                
-                <Button
-                  type="submit"
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                  disabled={loading || !formData[currentQuestion.id]}
-                >
-                  {loading ? "Enregistrement..." : isLastStep ? "Terminer" : "Suivant"}
-                </Button>
-              </div>
+            <CardFooter className="flex justify-between pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 0}
+                className="border-purple-500/20 text-gray-300 hover:bg-purple-900/30"
+              >
+                Précédent
+              </Button>
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                disabled={loading}
+              >
+                {loading ? "Enregistrement..." : isLastStep ? "Terminer" : "Suivant"}
+              </Button>
             </CardFooter>
           </form>
         </Card>

@@ -1,256 +1,185 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { jobsApi } from '@/lib/api';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { CalendarIcon, SearchIcon, MapPinIcon, CoinsIcon, ClockIcon, TagIcon } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/config/firebase';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
-// Types
 interface Job {
   id: string;
   title: string;
   description: string;
-  category: string;
   budget: string;
-  status: string;
+  deadline: string;
+  createdAt: string;
   creatorId: string;
-  createdAt: any;
-  skills: string[];
+  creatorName: string;
+  status: 'open' | 'closed';
 }
 
-const Jobs = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+const Jobs: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>(searchParams.get('category') || 'all');
-  const [searchTerm, setSearchTerm] = useState<string>(searchParams.get('search') || '');
-  const [categoryFilter, setCategoryFilter] = useState<string>(searchParams.get('category') || 'all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'closed'>('all');
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      setLoading(true);
-      try {
-        // Remplacer par un appel API réel lorsque le backend sera prêt
-        // const response = await jobsApi.getJobs({ 
-        //   category: categoryFilter !== 'all' ? categoryFilter : undefined,
-        //   search: searchTerm || undefined
-        // });
-        // setJobs(response.data.jobs);
-        
-        // En attendant l'implémentation de l'API, on simule un délai
-        setTimeout(() => {
-          setJobs([]);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Erreur lors du chargement des offres:', error);
-        setJobs([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchJobs();
-  }, [categoryFilter, searchTerm]);
+  }, []);
 
-  // Filtrer les jobs en fonction des critères
+  const fetchJobs = async () => {
+    setIsLoading(true);
+    try {
+      const jobsQuery = query(
+        collection(db, 'jobs'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(jobsQuery);
+      const jobsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Job[];
+      
+      setJobs(jobsData);
+    } catch (error: any) {
+      toast({
+        title: 'Erreur',
+        description: error.message || 'Une erreur est survenue lors de la récupération des annonces',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleFilterChange = (status: 'all' | 'open' | 'closed') => {
+    setFilterStatus(status);
+  };
+
   const filteredJobs = jobs.filter(job => {
-    // Filtre par catégorie
-    if (categoryFilter && categoryFilter !== 'all' && job.category !== categoryFilter) {
-      return false;
-    }
+    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         job.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Filtre par recherche (dans le titre ou la description)
-    if (searchTerm && !job.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !job.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
+    const matchesStatus = filterStatus === 'all' || job.status === filterStatus;
     
-    return true;
+    return matchesSearch && matchesStatus;
   });
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setCategoryFilter(value === 'all' ? '' : value);
-    
-    // Mettre à jour l'URL
-    const newParams = new URLSearchParams(searchParams);
-    if (value === 'all') {
-      newParams.delete('category');
-    } else {
-      newParams.set('category', value);
-    }
-    setSearchParams(newParams);
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Mettre à jour l'URL
-    const newParams = new URLSearchParams(searchParams);
-    if (searchTerm) {
-      newParams.set('search', searchTerm);
-    } else {
-      newParams.delete('search');
-    }
-    setSearchParams(newParams);
-  };
-
-  const formatDate = (seconds: number) => {
-    const date = new Date(seconds * 1000);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return "Aujourd'hui";
-    } else if (diffDays === 1) {
-      return "Hier";
-    } else if (diffDays < 7) {
-      return `Il y a ${diffDays} jours`;
-    } else {
-      return date.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-    }
-  };
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
-      <main className="flex-grow container mx-auto px-4 py-8 mt-16">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Offres d'emploi</h1>
-          <p className="text-muted-foreground">
-            Trouvez des opportunités de collaboration avec des créateurs de contenu et des experts
-          </p>
-        </div>
-
-        <div className="mb-6">
-          <form onSubmit={handleSearch} className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-[250px]">
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher des offres..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+    <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+          Annonces
+        </h1>
+        
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Rechercher une annonce..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full"
+              />
             </div>
-            
-            <div className="w-full md:w-auto">
-              <Select value={activeTab} onValueChange={handleTabChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les catégories</SelectItem>
-                  <SelectItem value="editeur">Éditeurs vidéo</SelectItem>
-                  <SelectItem value="graphiste">Graphistes</SelectItem>
-                  <SelectItem value="developpeur">Développeurs</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2">
+              <Button 
+                variant={filterStatus === 'all' ? 'default' : 'outline'}
+                onClick={() => handleFilterChange('all')}
+              >
+                Toutes
+              </Button>
+              <Button 
+                variant={filterStatus === 'open' ? 'default' : 'outline'}
+                onClick={() => handleFilterChange('open')}
+              >
+                Ouvertes
+              </Button>
+              <Button 
+                variant={filterStatus === 'closed' ? 'default' : 'outline'}
+                onClick={() => handleFilterChange('closed')}
+              >
+                Fermées
+              </Button>
             </div>
-            
-            <Button type="submit">Rechercher</Button>
-          </form>
-        </div>
-
-        <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange} className="mb-8">
-          <TabsList>
-            <TabsTrigger value="all">Toutes les offres</TabsTrigger>
-            <TabsTrigger value="editeur">Éditeurs vidéo</TabsTrigger>
-            <TabsTrigger value="graphiste">Graphistes</TabsTrigger>
-            <TabsTrigger value="developpeur">Développeurs</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
-        ) : filteredJobs.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredJobs.map((job) => (
-              <Card key={job.id} className="hover:shadow-lg transition-shadow">
+          
+          {user?.role === 'creator' && (
+            <div className="flex justify-end">
+              <Link to="/creator-dashboard">
+                <Button className="bg-purple-600 hover:bg-purple-700">
+                  Gérer mes annonces
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+        
+        {isLoading ? (
+          <div className="text-center py-8">Chargement des annonces...</div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="text-center py-8">Aucune annonce ne correspond à votre recherche</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredJobs.map(job => (
+              <Card key={job.id} className="bg-black/30 border-purple-500/10">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
-                      <Badge variant={job.status === 'open' ? 'default' : 'secondary'} className="mb-2">
-                        {job.status === 'open' ? 'Active' : 'Fermée'}
-                      </Badge>
                       <CardTitle className="text-xl">{job.title}</CardTitle>
+                      <CardDescription>
+                        Par {job.creatorName} • Publiée le {format(new Date(job.createdAt), 'dd MMM yyyy', { locale: fr })}
+                      </CardDescription>
                     </div>
-                    <Badge variant="outline">{job.category === 'editeur' ? 'Éditeur vidéo' : job.category === 'graphiste' ? 'Graphiste' : 'Développeur'}</Badge>
+                    <div>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        job.status === 'open' 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {job.status === 'open' ? 'Ouverte' : 'Fermée'}
+                      </span>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground mb-4 line-clamp-3">
-                    {job.description}
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm">
-                      <CoinsIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{job.budget}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>Publié le {formatDate(job.createdAt.seconds)}</span>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4" />
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {job.skills.slice(0, 3).map((skill, index) => (
-                      <Badge key={index} variant="outline" className="flex items-center">
-                        <TagIcon className="h-3 w-3 mr-1" />
-                        {skill}
-                      </Badge>
-                    ))}
-                    {job.skills.length > 3 && (
-                      <Badge variant="outline">+{job.skills.length - 3}</Badge>
-                    )}
+                  <p className="text-sm text-gray-300 line-clamp-3">{job.description}</p>
+                  <div className="mt-4 flex justify-between text-sm">
+                    <span className="font-medium">Budget: {job.budget}€</span>
+                    <span>Date limite: {format(new Date(job.deadline), 'dd/MM/yyyy')}</span>
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" asChild>
-                    <Link to={`/jobs/${job.id}`}>Voir les détails</Link>
-                  </Button>
+                  {user && job.status === 'open' && (
+                    <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                      Postuler
+                    </Button>
+                  )}
+                  {!user && (
+                    <Link to="/login" className="w-full">
+                      <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                        Connectez-vous pour postuler
+                      </Button>
+                    </Link>
+                  )}
                 </CardFooter>
               </Card>
             ))}
           </div>
-        ) : (
-          <div className="text-center p-8">
-            <h3 className="text-xl font-medium mb-2">Aucune offre trouvée</h3>
-            <p className="text-muted-foreground">
-              {jobs.length === 0 
-                ? "Il n'y a pas encore d'offres. Revenez plus tard ou publiez votre propre offre !" 
-                : "Essayez de modifier vos critères de recherche"}
-            </p>
-            <Button className="mt-4" asChild>
-              <Link to="/create-job">Publier une offre</Link>
-            </Button>
-          </div>
         )}
-      </main>
-
-      <Footer />
+      </div>
     </div>
   );
 };

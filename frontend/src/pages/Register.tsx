@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,14 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [error, setError] = useState("");
-  const { register } = useAuth();
+  const { register, user } = useAuth();
+
+  // Rediriger si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

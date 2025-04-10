@@ -12,7 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 export default function Navbar() {
-  const { currentUser, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -24,14 +24,14 @@ export default function Navbar() {
       setScrolled(isScrolled);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Fermer le menu mobile lors d'un changement de route
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [location]);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -106,14 +106,14 @@ export default function Navbar() {
 
           {/* Boutons d'action - Desktop */}
           <div className="hidden md:flex items-center space-x-2">
-            {currentUser ? (
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8 border border-purple-500/20">
-                      <AvatarImage src={currentUser.photoURL || ''} alt={currentUser.displayName || ''} />
+                      <AvatarImage src={user.photoURL || user.avatar || ''} alt={user.displayName || user.name} />
                       <AvatarFallback className="bg-purple-900/30 text-purple-200">
-                        {getInitials(currentUser.displayName)}
+                        {getInitials(user.displayName || user.name)}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -221,7 +221,7 @@ export default function Navbar() {
               À propos
             </Link>
 
-            {currentUser ? (
+            {user ? (
               <>
                 <div className="h-[1px] bg-purple-500/20 my-2"></div>
                 <Link
@@ -244,7 +244,7 @@ export default function Navbar() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-sm text-left text-red-400"
+                  className="text-sm text-red-400"
                 >
                   Déconnexion
                 </button>
@@ -252,18 +252,18 @@ export default function Navbar() {
             ) : (
               <>
                 <div className="h-[1px] bg-purple-500/20 my-2"></div>
-                <div className="flex flex-col space-y-2">
-                  <Link to="/login">
-                    <Button variant="outline" className="w-full border-purple-500/30 text-white hover:bg-purple-900/30">
-                      Se connecter
-                    </Button>
-                  </Link>
-                  <Link to="/register">
-                    <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
-                      S'inscrire
-                    </Button>
-                  </Link>
-                </div>
+                <Link
+                  to="/login"
+                  className="text-sm text-gray-300"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-sm text-gray-300"
+                >
+                  S'inscrire
+                </Link>
               </>
             )}
           </nav>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { 
-  User,
+  User as FirebaseUser,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -11,7 +11,7 @@ import { auth, db } from '../config/firebase';
 import { authService } from '@/services/authService';
 
 // Types d'utilisateur
-export type UserRole = 'admin' | 'creator' | 'expert';
+export type UserRole = 'admin' | 'creator' | 'expert' | 'pending';
 
 export interface User {
   uid: string;
@@ -22,6 +22,13 @@ export interface User {
   bio?: string;
   createdAt: string;
   verified: boolean;
+  displayName?: string;
+  photoURL?: string | null;
+  phone?: string;
+  address?: string;
+  skills?: string;
+  experience?: string;
+  education?: string;
 }
 
 interface AuthContextType {
@@ -29,7 +36,7 @@ interface AuthContextType {
   register: (email: string, password: string, userData: any) => Promise<User>;
   login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
-  updateUserProfile: (data: any) => Promise<void>;
+  updateUserProfile: (data: any, uid?: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -52,8 +59,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChange((user) => {
-      setUser(user);
+    const unsubscribe = authService.onAuthStateChange(async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userData = await authService.getUserData(firebaseUser.uid);
+          if (userData) {
+            setUser({
+              ...userData,
+              displayName: firebaseUser.displayName || userData.name,
+              photoURL: firebaseUser.photoURL || userData.avatar,
+            });
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des données utilisateur:', error);
+        }
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
@@ -66,12 +88,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register: authService.register,
     login: authService.login,
     logout: authService.logout,
-    updateUserProfile: async (data: any) => {
-      if (!user) {
+    updateUserProfile: async (data: any, uid?: string) => {
+      const userId = uid || user?.uid;
+      if (!userId) {
         throw new Error('Aucun utilisateur connecté');
       }
 
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         ...data,
         updatedAt: new Date(),

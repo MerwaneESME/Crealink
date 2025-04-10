@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
@@ -16,10 +15,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
 
   // Rediriger si l'utilisateur est déjà connecté
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       navigate('/dashboard');
     }
@@ -31,10 +30,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const user = await authService.login(formData.email, formData.password);
-      if (user) {
-        navigate('/dashboard');
-      }
+      await login(formData.email, formData.password);
+      navigate('/profile');
     } catch (error: any) {
       setError(error.message || 'Une erreur est survenue lors de la connexion');
     } finally {
