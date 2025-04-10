@@ -15,6 +15,10 @@ import JobDetailsPage from './pages/JobDetails';
 import MessagesPage from './pages/Messages';
 import ProfilePage from './pages/Profile';
 import NotFound from './pages/NotFound';
+import About from './pages/About';
+import Onboarding from '@/pages/Onboarding';
+import RoleSelection from '@/pages/RoleSelection';
+import OnboardingForm from '@/pages/OnboardingForm';
 
 // Layout Components
 import Navbar from './components/Navbar';
@@ -48,8 +52,10 @@ function AppRoutes() {
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/role-selection" element={<RoleSelection />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:id" element={<JobDetailsPage />} />
           
@@ -69,6 +75,8 @@ function AppRoutes() {
               <ProfilePage />
             </ProtectedRoute>
           } />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/onboarding-form" element={<OnboardingForm />} />
           
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />

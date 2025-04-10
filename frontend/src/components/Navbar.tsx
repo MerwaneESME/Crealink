@@ -95,7 +95,7 @@ export default function Navbar() {
             <Link 
               to="/about" 
               className={`text-sm hover:text-purple-400 transition-colors ${
-                location.pathname === '/about' 
+                location.pathname.includes('/about') 
                   ? 'text-purple-400' 
                   : 'text-gray-300'
               }`}
@@ -198,7 +198,7 @@ export default function Navbar() {
           <nav className="flex flex-col space-y-4">
             <Link
               to="/"
-              className={`text-sm ${
+              className={`text-sm hover:text-purple-400 transition-colors ${
                 location.pathname === '/' ? 'text-purple-400' : 'text-gray-300'
               }`}
             >
@@ -206,7 +206,7 @@ export default function Navbar() {
             </Link>
             <Link
               to="/jobs"
-              className={`text-sm ${
+              className={`text-sm hover:text-purple-400 transition-colors ${
                 location.pathname.includes('/jobs') ? 'text-purple-400' : 'text-gray-300'
               }`}
             >
@@ -214,8 +214,8 @@ export default function Navbar() {
             </Link>
             <Link
               to="/about"
-              className={`text-sm ${
-                location.pathname === '/about' ? 'text-purple-400' : 'text-gray-300'
+              className={`text-sm hover:text-purple-400 transition-colors ${
+                location.pathname.includes('/about') ? 'text-purple-400' : 'text-gray-300'
               }`}
             >
               À propos

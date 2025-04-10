@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { authService } from '@/services/authService';
 
 // Types d'utilisateur
 export type UserRole = 'admin' | 'creator' | 'expert';
@@ -24,19 +25,19 @@ export interface User {
 }
 
 interface AuthContextType {
-  currentUser: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, userData: any) => Promise<void>;
+  user: User | null;
+  register: (email: string, password: string, userData: any) => Promise<User>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   updateUserProfile: (data: any) => Promise<void>;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -47,62 +48,35 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+    const unsubscribe = authService.onAuthStateChange((user) => {
+      setUser(user);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
-  async function login(email: string, password: string) {
-    return signInWithEmailAndPassword(auth, email, password)
-      .then((result) => {
-        console.log('Connecté avec succès');
-      });
-  }
-
-  async function register(email: string, password: string, userData: any) {
-    return createUserWithEmailAndPassword(auth, email, password)
-      .then(async (result) => {
-        // Créer un profil utilisateur dans Firestore
-        const userRef = doc(db, 'users', result.user.uid);
-        await setDoc(userRef, {
-          email,
-          ...userData,
-          createdAt: new Date(),
-        });
-        console.log('Utilisateur créé avec succès');
-      });
-  }
-
-  async function logout() {
-    return signOut(auth);
-  }
-
-  async function updateUserProfile(data: any) {
-    if (!currentUser) {
-      throw new Error('Aucun utilisateur connecté');
-    }
-
-    const userRef = doc(db, 'users', currentUser.uid);
-    await updateDoc(userRef, {
-      ...data,
-      updatedAt: new Date(),
-    });
-  }
-
-  const value: AuthContextType = {
-    currentUser,
+  const value = {
+    user,
     loading,
-    login,
-    register,
-    logout,
-    updateUserProfile,
+    register: authService.register,
+    login: authService.login,
+    logout: authService.logout,
+    updateUserProfile: async (data: any) => {
+      if (!user) {
+        throw new Error('Aucun utilisateur connecté');
+      }
+
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        ...data,
+        updatedAt: new Date(),
+      });
+    },
   };
 
   return (

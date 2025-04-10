@@ -1,112 +1,116 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Rediriger si l'utilisateur est déjà connecté
+  React.useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
-      setLoading(true);
-      await login(email, password);
-      toast({
-        title: 'Connexion réussie',
-        description: 'Vous êtes maintenant connecté à votre compte.',
-        variant: 'default',
-      });
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Erreur de connexion:', error);
-      toast({
-        title: 'Erreur de connexion',
-        description: 'Email ou mot de passe incorrect.',
-        variant: 'destructive',
-      });
+      const user = await authService.login(formData.email, formData.password);
+      if (user) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Une erreur est survenue lors de la connexion');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto py-10 flex justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
-          <CardDescription>
-            Entrez vos identifiants pour accéder à votre compte
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="votre@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Mot de passe
-                </label>
-                <Link
-                  to="/reset-password"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Mot de passe oublié?
-                </Link>
+    <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 flex items-center justify-center p-4 pt-24">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="bg-black/40 backdrop-blur-sm border border-purple-500/20 shadow-lg shadow-purple-500/10">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+              Connexion
+            </CardTitle>
+            <CardDescription className="text-center text-gray-400">
+              Entrez vos identifiants pour vous connecter
+            </CardDescription>
+          </CardHeader>
+
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-300">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="votre@email.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="bg-black/50 border-purple-500/20 text-gray-300 focus:ring-purple-500/50"
+                  required
+                />
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? 'Connexion en cours...' : 'Se connecter'}
-            </Button>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-300">Mot de passe</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="bg-black/50 border-purple-500/20 text-gray-300 focus:ring-purple-500/50"
+                  required
+                />
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col space-y-4 pt-4">
+              {error && (
+                <div className="text-red-500 text-sm text-center w-full">
+                  {error}
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                disabled={loading}
+              >
+                {loading ? "Connexion..." : "Se connecter"}
+              </Button>
+              <p className="text-sm text-gray-400 text-center">
+                Pas encore de compte ?{" "}
+                <Link to="/register" className="text-purple-400 hover:text-purple-300">
+                  S'inscrire
+                </Link>
+              </p>
+            </CardFooter>
           </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-500">
-            Vous n'avez pas de compte?{' '}
-            <Link to="/register" className="text-primary font-medium hover:underline">
-              S'inscrire
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+        </Card>
+      </motion.div>
     </div>
   );
 };
