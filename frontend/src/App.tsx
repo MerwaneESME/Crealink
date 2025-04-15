@@ -6,7 +6,9 @@ import {
   Navigate,
   createRoutesFromElements,
   createBrowserRouter,
-  RouterProvider
+  RouterProvider,
+  UNSAFE_NavigationContext as NavigationContext,
+  UNSAFE_DataRouterContext as DataRouterContext
 } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 // import { ThemeProvider } from './contexts/ThemeContext';
@@ -45,10 +47,13 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     return <Navigate to="/login" />;
   }
   
-  console.log('User role:', user.role);
-  console.log('Allowed roles:', allowedRoles);
+  // Si aucun rôle n'est spécifié, autoriser l'accès
+  if (!allowedRoles) {
+    return <>{children}</>;
+  }
   
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // Vérifier si l'utilisateur a un des rôles autorisés
+  if (!allowedRoles.includes(user.role)) {
     console.log('Access denied: user role not in allowed roles');
     return <Navigate to="/" />;
   }
@@ -78,17 +83,17 @@ function AppLayout() {
           
           {/* Protected Routes */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['expert', 'creator']}>
               <Dashboard />
             </ProtectedRoute>
           } />
           <Route path="/messages" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['expert', 'creator']}>
               <MessagesPage />
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['expert', 'creator']}>
               <ProfilePage />
             </ProtectedRoute>
           } />
@@ -113,7 +118,7 @@ function AppLayout() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppLayout />
       </Router>
     </AuthProvider>

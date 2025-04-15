@@ -120,7 +120,12 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-black/90 text-white border border-purple-500/20 mt-1 backdrop-blur-md">
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="cursor-pointer hover:bg-purple-900/30">Tableau de bord</Link>
+                    <Link 
+                      to={user.role === 'creator' ? '/creator-dashboard' : '/dashboard'} 
+                      className="cursor-pointer hover:bg-purple-900/30"
+                    >
+                      Tableau de bord
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer hover:bg-purple-900/30">Mon profil</Link>
@@ -225,7 +230,7 @@ export default function Navbar() {
               <>
                 <div className="h-[1px] bg-purple-500/20 my-2"></div>
                 <Link
-                  to="/dashboard"
+                  to={user.role === 'creator' ? '/creator-dashboard' : '/dashboard'}
                   className="text-sm text-gray-300"
                 >
                   Tableau de bord
