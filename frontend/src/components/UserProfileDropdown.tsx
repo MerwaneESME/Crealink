@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserCircle2, LogOut, Settings, MessageSquare, User, Bell } from 'lucide-react';
+import { UserCircle2, LogOut, Settings, MessageSquare, User, Bell, LayoutDashboard, Briefcase } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 
 const UserProfileDropdown = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
   const [unreadMessages, setUnreadMessages] = useState(2); // Exemple de notification
   const navigate = useNavigate();
 
@@ -25,7 +25,7 @@ const UserProfileDropdown = () => {
     navigate('/');
   };
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return (
       <div className="flex gap-2">
         <Button variant="outline" asChild>
@@ -120,6 +120,12 @@ const UserProfileDropdown = () => {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link to={user.role === 'expert' ? '/portfolio' : '/creator-dashboard'} className="cursor-pointer flex w-full">
+                {user.role === 'expert' ? <Briefcase className="mr-2 h-4 w-4" /> : <LayoutDashboard className="mr-2 h-4 w-4" />}
+                <span>{user.role === 'expert' ? 'Portfolio' : 'Tableau de bord'}</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/profile" className="cursor-pointer flex w-full">
                 <User className="mr-2 h-4 w-4" />

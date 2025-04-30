@@ -1,7 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
+  signOut as firebaseSignOut,
   onAuthStateChanged,
   User as FirebaseUser,
   fetchSignInMethodsForEmail
@@ -14,7 +14,9 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
+  enableNetwork,
+  disableNetwork
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User } from '../contexts/AuthContext';
@@ -40,30 +42,38 @@ export interface UserData {
 }
 
 // Fonctions utilitaires
-const getUserData = async (uid: string): Promise<User | null> => {
+async function getUserData(uid: string): Promise<User | null> {
   try {
-    const userDoc = await getDoc(doc(db, 'users', uid));
-    if (userDoc.exists()) {
-      return userDoc.data() as User;
+    console.log('Fetching user data for uid:', uid);
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data() as User;
+      console.log('User data retrieved:', userData);
+      return userData;
     }
+    
+    console.log('No user data found for uid:', uid);
     return null;
-  } catch (error: any) {
-    console.error('Erreur lors de la récupération des données utilisateur:', error);
-    throw new Error(error.message || 'Une erreur est survenue lors de la récupération des données');
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    throw error;
   }
-};
+}
 
 // Fonction de connexion
-const loginUser = async (email: string, password: string): Promise<User> => {
+async function loginUser(email: string, password: string): Promise<User> {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
-
-    // Vérifier si l'utilisateur existe dans Firestore
+    console.log('User logged in:', firebaseUser);
+    
     const userData = await getUserData(firebaseUser.uid);
+    console.log('User data after login:', userData);
+    
     if (!userData) {
-      await signOut(auth);
-      throw new Error('Compte non trouvé dans la base de données');
+      throw new Error('Données utilisateur non trouvées');
     }
 
     return {
@@ -75,64 +85,121 @@ const loginUser = async (email: string, password: string): Promise<User> => {
     console.error('Erreur lors de la connexion:', error);
     throw new Error(error.message || 'Une erreur est survenue lors de la connexion');
   }
-};
+}
 
 export const authService = {
-  // Inscription
-  async register(email: string, password: string, userData: Omit<User, "uid">): Promise<User> {
+  // Créer un nouvel utilisateur
+  async register(email: string, password: string, userData: Partial<User>): Promise<User> {
     try {
-      // Vérifier si l'email est déjà utilisé
-      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
-      if (signInMethods.length > 0) {
-        throw new Error('Cet email est déjà utilisé');
-      }
-
-      // Créer l'utilisateur dans Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
+      const user = userCredential.user;
 
       // Créer le document utilisateur dans Firestore
-      const userRef = doc(db, 'users', firebaseUser.uid);
-      const newUser: User = {
-        ...userData,
-        uid: firebaseUser.uid,
-        role: userData.role || 'pending',
-        createdAt: new Date().toISOString(),
-        verified: false,
-        displayName: firebaseUser.displayName || userData.name,
-        photoURL: firebaseUser.photoURL || userData.avatar || null,
+      const userDoc: User = {
+        uid: user.uid,
+        email: user.email || '',
+        name: userData.name || '',
+        role: userData.role || 'creator',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...userData
       };
 
-      // Filtrer les valeurs undefined avant de sauvegarder
-      const cleanUser = Object.fromEntries(
-        Object.entries(newUser).filter(([_, value]) => value !== undefined)
-      ) as User;
+      await setDoc(doc(db, 'users', user.uid), userDoc);
 
-      await setDoc(userRef, cleanUser);
-      console.log('User registered with role:', newUser.role);
-
-      return newUser;
-    } catch (error: any) {
+      return userDoc;
+    } catch (error) {
       console.error('Erreur lors de l\'inscription:', error);
-      throw new Error(error.message || 'Une erreur est survenue lors de l\'inscription');
+      throw error;
     }
   },
 
-  // Connexion
-  login: loginUser,
-
-  // Déconnexion
-  async logout() {
+  // Se connecter
+  async login(email: string, password: string): Promise<User> {
     try {
-      await signOut(auth);
+      // Vérifier d'abord si l'utilisateur existe
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length === 0) {
+        throw new Error('Aucun compte trouvé avec cet email');
+      }
+
+      // Tenter la connexion
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('Firebase user:', user);
+
+      // Récupérer les données utilisateur depuis Firestore
+      const userData = await getUserData(user.uid);
+      console.log('User data from Firestore:', userData);
+
+      if (!userData) {
+        // Créer un document utilisateur par défaut si nécessaire
+        const defaultUserData: Partial<User> = {
+          uid: user.uid,
+          email: user.email || '',
+          name: user.displayName || '',
+          role: 'creator',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        await setDoc(doc(db, 'users', user.uid), defaultUserData);
+        return defaultUserData as User;
+      }
+
+      return {
+        ...userData,
+        displayName: user.displayName || userData.name,
+        photoURL: user.photoURL || userData.avatar
+      };
     } catch (error: any) {
-      console.error('Erreur lors de la déconnexion:', error);
-      throw new Error(error.message || 'Une erreur est survenue lors de la déconnexion');
+      console.error('Erreur lors de la connexion:', error);
+      if (error.code === 'auth/invalid-credential') {
+        throw new Error('Email ou mot de passe incorrect');
+      }
+      throw new Error(error.message || 'Une erreur est survenue lors de la connexion');
     }
   },
 
-  // Obtenir les données de l'utilisateur
-  getUserData,
+  // Se déconnecter
+  async signOut(): Promise<void> {
+    try {
+      // Désactiver temporairement le réseau Firestore avant la déconnexion
+      await disableNetwork(db);
+      await firebaseSignOut(auth);
+      // Réactiver le réseau après la déconnexion
+      await enableNetwork(db);
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+      throw error;
+    }
+  },
+
+  // Récupérer les données utilisateur
+  async getUserData(uid: string): Promise<Partial<User>> {
+    try {
+      console.log('Fetching user data for uid:', uid);
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      
+      if (userDoc.exists()) {
+        return userDoc.data() as User;
+      } else {
+        // Si le document n'existe pas, créer un document utilisateur par défaut
+        const defaultUserData: Partial<User> = {
+          uid,
+          role: 'creator',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await setDoc(doc(db, 'users', uid), defaultUserData);
+        return defaultUserData;
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      throw error;
+    }
+  },
 
   // Écouter les changements d'état d'authentification
   onAuthStateChange(callback: (user: FirebaseUser | null) => void) {
@@ -145,11 +212,11 @@ export const authService = {
       const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, {
         ...userData,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la mise à jour du profil:', error);
-      throw new Error(error.message || 'Une erreur est survenue lors de la mise à jour du profil');
+      throw error;
     }
   }
 }; 

@@ -20,13 +20,10 @@ const Index = () => {
     }
   };
 
-  // ID de la vidéo YouTube
-  const youtubeVideoId = "tDQGSf0XYqY";
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <Hero videoId={youtubeVideoId} />
+      <Hero />
       
       {/* Services Section */}
       <section id="services" className="py-20 px-4 container mx-auto relative overflow-hidden">

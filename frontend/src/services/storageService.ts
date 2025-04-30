@@ -1,37 +1,111 @@
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../config/firebase';
+import { auth } from '../config/firebase';
 
-export const storageService = {
-  async uploadProfilePhoto(file: File, userId: string): Promise<string> {
+export interface MediaFile {
+  url: string;
+  type: 'image' | 'video' | 'audio';
+  name: string;
+}
+
+class StorageService {
+  async uploadFile(file: File, path: string): Promise<MediaFile> {
     try {
-      const storageRef = ref(storage, `profile-photos/${userId}`);
-      
-      // Supprimer l'ancienne photo si elle existe
-      try {
-        await deleteObject(storageRef);
-      } catch (error) {
-        // Ignorer l'erreur si le fichier n'existe pas
+      // Vérification de base
+      if (!file) {
+        throw new Error('Aucun fichier fourni');
       }
 
-      // Uploader la nouvelle photo
-      await uploadBytes(storageRef, file);
-      
-      // Obtenir l'URL de téléchargement
-      const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
-    } catch (error: any) {
-      console.error('Erreur lors du téléchargement de la photo:', error);
-      throw new Error(error.message || 'Une erreur est survenue lors du téléchargement de la photo');
-    }
-  },
+      // Vérification du type de fichier
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Seuls les fichiers images sont acceptés');
+      }
 
-  async deleteProfilePhoto(userId: string): Promise<void> {
-    try {
-      const storageRef = ref(storage, `profile-photos/${userId}`);
-      await deleteObject(storageRef);
+      // Vérification de la taille
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('Le fichier est trop volumineux (max 5MB)');
+      }
+
+      // Construction du chemin
+      const userId = auth.currentUser?.uid || 'anonymous';
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+      const fullPath = `projects/${userId}/${fileName}`;
+
+      console.log('Tentative d\'upload avec les paramètres:', {
+        path: fullPath,
+        size: file.size,
+        type: file.type,
+        userId,
+        bucket: storage.app.options.storageBucket
+      });
+
+      // Création de la référence
+      const storageRef = ref(storage, fullPath);
+
+      // Préparation des métadonnées
+      const metadata = {
+        contentType: file.type,
+        customMetadata: {
+          uploadedBy: userId,
+          uploadDate: new Date().toISOString()
+        }
+      };
+
+      // Upload avec métadonnées
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      console.log('Upload réussi:', {
+        path: snapshot.ref.fullPath,
+        size: snapshot.metadata.size,
+        contentType: snapshot.metadata.contentType,
+        customMetadata: snapshot.metadata.customMetadata
+      });
+
+      // Récupération de l'URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log('URL obtenue:', downloadURL);
+
+      return {
+        name: file.name,
+        url: downloadURL,
+        type: 'image'
+      };
+
     } catch (error: any) {
-      console.error('Erreur lors de la suppression de la photo:', error);
-      throw new Error(error.message || 'Une erreur est survenue lors de la suppression de la photo');
+      console.error('Erreur d\'upload:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        serverResponse: error.serverResponse,
+        bucket: storage.app.options.storageBucket
+      });
+
+      // Gestion spécifique des erreurs
+      if (error.code === 'storage/unauthorized') {
+        throw new Error('Vous n\'êtes pas autorisé à uploader des fichiers');
+      } else if (error.code === 'storage/canceled') {
+        throw new Error('L\'upload a été annulé');
+      } else if (error.code === 'storage/retry-limit-exceeded') {
+        throw new Error('L\'upload a échoué après plusieurs tentatives');
+      } else if (error.code === 'storage/invalid-argument') {
+        throw new Error('Arguments invalides pour l\'upload');
+      } else if (error.code === 'storage/unknown') {
+        throw new Error('Erreur inconnue lors de l\'upload. Veuillez réessayer.');
+      } else {
+        throw new Error(`Erreur d'upload: ${error.message}`);
+      }
     }
   }
-}; 
+
+  async deleteFile(path: string): Promise<void> {
+    try {
+      const storageRef = ref(storage, path);
+      await deleteObject(storageRef);
+    } catch (error: any) {
+      console.error('Erreur de suppression:', error);
+      throw new Error('Impossible de supprimer le fichier');
+    }
+  }
+}
+
+export const storageService = new StorageService(); 

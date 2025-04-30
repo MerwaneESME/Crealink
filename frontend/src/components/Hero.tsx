@@ -4,11 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
-interface HeroProps {
-  videoId?: string;
-}
-
-const Hero = ({ videoId = "tDQGSf0XYqY" }: HeroProps) => {
+const Hero = () => {
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
 
   useEffect(() => {
@@ -29,16 +25,17 @@ const Hero = ({ videoId = "tDQGSf0XYqY" }: HeroProps) => {
   return (
     <div className="relative min-h-[100vh] flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute inset-0 z-0">
-        {/* Fond vidéo YouTube */}
-        <div className="absolute inset-0 pointer-events-none">
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&playlist=${videoId}`}
-            allow="autoplay; encrypted-media"
-            className="absolute w-[300%] h-[300%] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ border: 'none' }}
-            title="YouTube video player"
-          ></iframe>
-        </div>
+        {/* Vidéo locale en arrière-plan */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute w-full h-full object-cover"
+          style={{ objectFit: 'cover' }}
+        >
+          <source src="/videos/background.mp4" type="video/mp4" />
+        </video>
         
         {/* Overlay avec dégradé */}
         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/70 to-pink-900/70 z-1"></div>
@@ -86,24 +83,21 @@ const Hero = ({ videoId = "tDQGSf0XYqY" }: HeroProps) => {
             <span className="text-purple-500 font-semibold">experts techniques</span>
           </motion.p>
         </div>
-        
+
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 1.2 }}
-          className="flex flex-col md:flex-row gap-4 justify-center mt-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.9 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Link to="/signup">
-            <Button className="neon-button text-lg px-8 py-6">
-              Rejoindre en tant que Créateur
+          <Link to="/register">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-6 text-lg">
+              Commencer maintenant
             </Button>
           </Link>
-          <Link to="/signup">
-            <Button
-              variant="outline"
-              className="neon-border rounded-full border border-white/20 text-white hover:bg-white/5 text-lg px-8 py-6"
-            >
-              Rejoindre en tant qu'Expert
+          <Link to="/about">
+            <Button variant="outline" className="border-2 border-white/20 hover:bg-white/10 text-white px-8 py-6 text-lg">
+              En savoir plus
             </Button>
           </Link>
         </motion.div>
@@ -113,11 +107,10 @@ const Hero = ({ videoId = "tDQGSf0XYqY" }: HeroProps) => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 2 }}
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center"
+          transition={{ delay: 1.5, duration: 1 }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
         >
-          <p className="text-white/50 text-sm mb-2">Scroll to explore</p>
-          <ChevronDown className="text-white/50 animate-bounce" size={24} />
+          <ChevronDown className="w-8 h-8 text-white/50 animate-bounce" />
         </motion.div>
       )}
     </div>

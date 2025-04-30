@@ -62,13 +62,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const unsubscribe = authService.onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          console.log('Firebase user:', firebaseUser);
           const userData = await authService.getUserData(firebaseUser.uid);
+          console.log('User data from Firestore:', userData);
           if (userData) {
-            setUser({
+            const userWithRole = {
               ...userData,
               displayName: firebaseUser.displayName || userData.name,
               photoURL: firebaseUser.photoURL || userData.avatar,
-            });
+            };
+            console.log('User with role:', userWithRole);
+            setUser(userWithRole);
           }
         } catch (error) {
           console.error('Erreur lors de la récupération des données utilisateur:', error);
@@ -104,7 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 } 
