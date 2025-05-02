@@ -114,13 +114,12 @@ const About = () => {
         <p className="text-lg mb-8 max-w-2xl mx-auto text-gray-300">
           Prêt à donner vie à vos projets créatifs ? Rejoignez notre communauté grandissante de créateurs et d'experts.
         </p>
-        <div className="space-x-4">
-          <Button asChild size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all duration-300">
-            <Link to="/register">S'inscrire</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="border-purple-500/30 text-white hover:bg-purple-900/30 hover:text-white transition-all duration-300">
-            <Link to="/jobs">Voir les Offres</Link>
-          </Button>
+        <div className="mt-8 flex justify-center space-x-4">
+          <Link to="/jobs">
+            <Button variant="outline" size="lg" className="bg-transparent border-purple-500 text-purple-100 hover:bg-purple-900/30 hover:text-white">
+              Parcourir les offres
+            </Button>
+          </Link>
         </div>
       </motion.section>
     </div>

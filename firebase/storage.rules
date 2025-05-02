@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Fonction pour logger les accès
+    function logAccess(action) {
+      return {
+        'action': action,
+        'userId': request.auth.uid,
+        'path': resource.name,
+        'time': request.time
+      };
+    }
+
+    // Règles pour les photos de profil
+    match /users/{userId}/profile/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null; // Autoriser tous les utilisateurs authentifiés
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Règles pour les fichiers de projet
+    match /projects/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Règle par défaut pour tout autre chemin
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+} 

@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
@@ -21,6 +22,7 @@ export interface User {
   avatar?: string;
   bio?: string;
   createdAt: string;
+  updatedAt: string;
   verified: boolean;
   displayName?: string;
   photoURL?: string | null;
@@ -72,7 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               photoURL: firebaseUser.photoURL || userData.avatar,
             };
             console.log('User with role:', userWithRole);
-            setUser(userWithRole);
+            setUser(userWithRole as User);
           }
         } catch (error) {
           console.error('Erreur lors de la récupération des données utilisateur:', error);
@@ -91,18 +93,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     register: authService.register,
     login: authService.login,
-    logout: authService.logout,
+    logout: authService.signOut,
     updateUserProfile: async (data: any, uid?: string) => {
       const userId = uid || user?.uid;
       if (!userId) {
         throw new Error('Aucun utilisateur connecté');
       }
 
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        ...data,
-        updatedAt: new Date(),
-      });
+      try {
+        // Mise à jour dans Firestore
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          ...data,
+          updatedAt: new Date(),
+        });
+
+        // Mise à jour dans Firebase Auth si photoURL est fournie
+        if (data.photoURL && auth.currentUser) {
+          await updateProfile(auth.currentUser, {
+            photoURL: data.photoURL
+          });
+        }
+
+        // Mise à jour de l'état local
+        setUser(prev => prev ? {
+          ...prev,
+          ...data,
+          photoURL: data.photoURL || prev.photoURL
+        } as User : null);
+
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du profil:', error);
+        throw error;
+      }
     },
   };
 

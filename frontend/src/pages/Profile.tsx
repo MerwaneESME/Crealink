@@ -164,21 +164,36 @@ const Profile: React.FC = () => {
         
         <div className="flex flex-col items-center mb-8">
           <div className="relative group">
-            <Avatar className="w-32 h-32 cursor-pointer" onClick={handlePhotoClick}>
-              <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <span className="text-white text-sm">Changer la photo</span>
+            <div 
+              className="w-32 h-32 cursor-pointer relative"
+              onClick={handlePhotoClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handlePhotoClick();
+                }
+              }}
+              aria-label="Changer la photo de profil"
+            >
+              <Avatar className="w-full h-full">
+                <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                <span className="text-white text-sm">Changer la photo</span>
+              </div>
             </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              aria-label="Sélectionner une photo de profil"
+              title="Sélectionner une photo de profil"
+            />
           </div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handlePhotoChange}
-          />
         </div>
         
         <Tabs defaultValue="profile" className="space-y-6">

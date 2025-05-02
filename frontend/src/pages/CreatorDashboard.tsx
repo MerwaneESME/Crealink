@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc, upd
 import { db } from '@/config/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { storageService } from '@/services/storageService';
 
 interface Job {
   id: string;
@@ -25,11 +27,12 @@ interface Job {
 }
 
 const CreatorDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -167,6 +170,35 @@ const CreatorDashboard: React.FC = () => {
     }
   };
 
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsLoading(true);
+    try {
+      const photoURL = await storageService.uploadProfilePhoto(file, user.uid);
+      await updateUserProfile({
+        photoURL
+      }, user.uid);
+      toast({
+        title: "Photo mise à jour",
+        description: "Votre photo de profil a été mise à jour avec succès.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la mise à jour de la photo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!user || user.role !== 'creator') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
@@ -191,6 +223,40 @@ const CreatorDashboard: React.FC = () => {
           Tableau de bord créateur
         </h1>
         
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative group">
+            <div 
+              className="w-32 h-32 cursor-pointer relative"
+              onClick={handlePhotoClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handlePhotoClick();
+                }
+              }}
+              aria-label="Changer la photo de profil"
+            >
+              <Avatar className="w-full h-full">
+                <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                <span className="text-white text-sm">Changer la photo</span>
+              </div>
+            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              aria-label="Sélectionner une photo de profil"
+              title="Sélectionner une photo de profil"
+            />
+          </div>
+        </div>
+
         <Tabs defaultValue="publish" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="publish">Publier une annonce</TabsTrigger>

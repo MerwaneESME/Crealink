@@ -19,7 +19,7 @@ import {
   disableNetwork
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
-import { User } from '../contexts/AuthContext';
+import { User, UserRole } from '../contexts/AuthContext';
 
 export interface UserData {
   uid: string;
@@ -91,33 +91,44 @@ export const authService = {
   // Créer un nouvel utilisateur
   async register(email: string, password: string, userData: Partial<User>): Promise<User> {
     try {
+      // Vérifier si l'email est déjà utilisé
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length > 0) {
+        throw new Error('Un compte existe déjà avec cet email');
+      }
+
+      // Créer l'utilisateur dans Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       // Créer le document utilisateur dans Firestore
-      const userDoc: User = {
+      const userDoc = {
         uid: user.uid,
         email: user.email || '',
         name: userData.name || '',
         role: userData.role || 'creator',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
         ...userData
-      };
+      } as User;
 
+      // S'assurer que le document est créé avant de continuer
       await setDoc(doc(db, 'users', user.uid), userDoc);
+      console.log('User document created in Firestore:', userDoc);
 
       return userDoc;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de l\'inscription:', error);
-      throw error;
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('Un compte existe déjà avec cet email');
+      }
+      throw new Error(error.message || 'Une erreur est survenue lors de l\'inscription');
     }
   },
 
   // Se connecter
   async login(email: string, password: string): Promise<User> {
     try {
-      // Vérifier d'abord si l'utilisateur existe
+      // Vérifier d'abord si l'utilisateur existe dans Firebase Auth
       const methods = await fetchSignInMethodsForEmail(auth, email);
       if (methods.length === 0) {
         throw new Error('Aucun compte trouvé avec cet email');
@@ -126,25 +137,15 @@ export const authService = {
       // Tenter la connexion
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log('Firebase user:', user);
+      console.log('Firebase user authenticated:', user);
 
       // Récupérer les données utilisateur depuis Firestore
       const userData = await getUserData(user.uid);
       console.log('User data from Firestore:', userData);
 
       if (!userData) {
-        // Créer un document utilisateur par défaut si nécessaire
-        const defaultUserData: Partial<User> = {
-          uid: user.uid,
-          email: user.email || '',
-          name: user.displayName || '',
-          role: 'creator',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        await setDoc(doc(db, 'users', user.uid), defaultUserData);
-        return defaultUserData as User;
+        console.error('No user data found in Firestore for uid:', user.uid);
+        throw new Error('Données utilisateur non trouvées. Veuillez contacter le support.');
       }
 
       return {
@@ -156,6 +157,8 @@ export const authService = {
       console.error('Erreur lors de la connexion:', error);
       if (error.code === 'auth/invalid-credential') {
         throw new Error('Email ou mot de passe incorrect');
+      } else if (error.code === 'auth/user-not-found') {
+        throw new Error('Aucun compte trouvé avec cet email');
       }
       throw new Error(error.message || 'Une erreur est survenue lors de la connexion');
     }
@@ -182,14 +185,20 @@ export const authService = {
       const userDoc = await getDoc(doc(db, 'users', uid));
       
       if (userDoc.exists()) {
-        return userDoc.data() as User;
+        const data = userDoc.data();
+        // Convertir les dates en ISO string si nécessaire
+        return {
+          ...data,
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()
+        } as Partial<User>;
       } else {
         // Si le document n'existe pas, créer un document utilisateur par défaut
         const defaultUserData: Partial<User> = {
           uid,
-          role: 'creator',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          role: 'creator' as UserRole,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
         
         await setDoc(doc(db, 'users', uid), defaultUserData);
@@ -212,7 +221,7 @@ export const authService = {
       const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, {
         ...userData,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du profil:', error);
