@@ -66,10 +66,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const userData = await authService.getUserData(firebaseUser.uid);
           console.log('User data from Firestore:', userData);
           if (userData) {
-            const userWithRole = {
-              ...userData,
+            let photoURL = firebaseUser.photoURL || userData.avatar || userData.photoURL;
+            if (photoURL) {
+              photoURL = photoURL.includes('?') 
+                ? `${photoURL}&t=${Date.now()}` 
+                : `${photoURL}?t=${Date.now()}`;
+            }
+            
+            const userWithRole: User = {
+              uid: userData.uid || firebaseUser.uid,
+              email: userData.email || firebaseUser.email,
+              name: userData.name || '',
+              role: userData.role || 'pending',
+              verified: userData.verified || false,
+              createdAt: userData.createdAt || new Date().toISOString(),
               displayName: firebaseUser.displayName || userData.name,
-              photoURL: firebaseUser.photoURL || userData.avatar,
+              photoURL,
+              bio: userData.bio,
+              phone: userData.phone,
+              address: userData.address,
+              skills: userData.skills,
+              experience: userData.experience,
+              education: userData.education,
             };
             console.log('User with role:', userWithRole);
             setUser(userWithRole);

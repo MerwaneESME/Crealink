@@ -145,9 +145,21 @@ class StorageService {
       if (!file.type.startsWith('image/')) {
         throw new Error('Le fichier doit être une image');
       }
+      
+      // Vérification de la taille (max 5MB pour les photos de profil)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('La photo de profil ne doit pas dépasser 5MB');
+      }
+
+      // Obtenir l'extension du fichier
+      const extension = file.name.split('.').pop() || 'jpg';
+      
+      // Générer un nom de fichier unique avec timestamp
+      const timestamp = Date.now();
+      const filename = `${userId}_${timestamp}.${extension}`;
 
       // Chemin de la photo de profil dans le bucket
-      const fullPath = `profile-photos/${userId}`;
+      const fullPath = `profile-photos/${filename}`;
       console.log(`Tentative d'upload de photo de profil vers ${fullPath}`);
 
       // Référence au fichier dans Cloud Storage

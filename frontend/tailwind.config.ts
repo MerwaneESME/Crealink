@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -89,6 +88,14 @@ export default {
 					from: { height: 'var(--radix-accordion-content-height)' },
 					to: { height: '0' }
 				},
+				'pulse-slow': {
+					'0%, 100%': { 
+						opacity: '0.8'
+					},
+					'50%': { 
+						opacity: '1'
+					},
+				},
 				glow: {
 					'0%, 100%': { 
 						boxShadow: '0 0 5px rgba(97, 18, 217, 0.5), 0 0 15px rgba(238, 123, 244, 0.5)' 
@@ -138,6 +145,7 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-slow': 'pulse-slow 6s ease-in-out infinite',
 				'glow': 'glow 2s infinite',
 				'text-glow': 'text-glow 2s infinite',
 				'float': 'float 4s ease-in-out infinite',

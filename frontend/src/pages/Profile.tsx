@@ -79,10 +79,16 @@ const Profile: React.FC = () => {
         ...formData,
         photoURL
       }, user.uid);
+      
       toast({
         title: "Photo mise à jour",
-        description: "Votre photo de profil a été mise à jour avec succès.",
+        description: "Votre photo de profil a été mise à jour avec succès. La page va être rechargée.",
       });
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -163,15 +169,31 @@ const Profile: React.FC = () => {
         </h1>
         
         <div className="flex flex-col items-center mb-8">
-          <div className="relative group">
-            <Avatar className="w-32 h-32 cursor-pointer" onClick={handlePhotoClick}>
-              <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+          <div className="relative mb-4">
+            <Avatar className="w-32 h-32">
+              {isLoading ? (
+                <div className="w-full h-full flex items-center justify-center bg-purple-900/20 rounded-full">
+                  <div className="w-8 h-8 border-4 border-t-purple-500 border-purple-200 rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <>
+                  <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </>
+              )}
             </Avatar>
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <span className="text-white text-sm">Changer la photo</span>
-            </div>
           </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handlePhotoClick}
+            disabled={isLoading}
+            className="mb-2 border-purple-500/30 hover:bg-purple-500/20 text-sm"
+          >
+            {isLoading ? "Téléchargement..." : "Changer la photo de profil"}
+          </Button>
+          
           <input
             type="file"
             ref={fileInputRef}
@@ -179,6 +201,7 @@ const Profile: React.FC = () => {
             accept="image/*"
             onChange={handlePhotoChange}
           />
+          {isLoading && <p className="text-sm text-purple-300 mt-2">Téléchargement en cours...</p>}
         </div>
         
         <Tabs defaultValue="profile" className="space-y-6">
