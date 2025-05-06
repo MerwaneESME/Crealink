@@ -26,10 +26,22 @@ service firebase.storage {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Fonction pour vérifier si le fichier est une photo de profil de l'utilisateur
+    function isUserProfilePhoto(fileName) {
+      // Format attendu: userId_timestamp.extension
+      return isAuthenticated() && fileName.split('_')[0] == request.auth.uid;
+    }
+
     // Fonction pour vérifier les métadonnées
     function hasValidMetadata() {
       return request.resource.contentType.matches('image/.*|video/.*|audio/.*') &&
              request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Fonction pour vérifier les métadonnées des photos de profil (max 5MB)
+    function hasValidProfilePhotoMetadata() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size < 5 * 1024 * 1024;
     }
 
     // Règles pour les projets
@@ -38,10 +50,16 @@ service firebase.storage {
       allow write: if isOwner(userId) && hasValidMetadata();
     }
 
-    // Règles pour les photos de profil
+    // Règles pour les photos de profil (ancien format)
     match /profile-photos/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isOwner(userId) && hasValidMetadata();
+      allow write: if isOwner(userId) && hasValidProfilePhotoMetadata();
+    }
+
+    // Règles pour les photos de profil (nouveau format)
+    match /profile-photos/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isUserProfilePhoto(fileName) && hasValidProfilePhotoMetadata();
     }
 
     // Règles par défaut pour tous les autres fichiers
