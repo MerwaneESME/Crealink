@@ -15,6 +15,21 @@ body {
   text-shadow: 0 0 5px rgba(139, 92, 246, 0.5), 0 0 20px rgba(139, 92, 246, 0.3);
 }
 
+/* Effet de texte lumineux avec dégradé pour le texte CREALINK */
+.glow-text {
+  text-shadow: 0 0 5px rgba(168, 85, 247, 0.7), 0 0 15px rgba(217, 70, 239, 0.5);
+  animation: text-glow 4s infinite alternate;
+}
+
+@keyframes text-glow {
+  0% {
+    text-shadow: 0 0 5px rgba(168, 85, 247, 0.7), 0 0 10px rgba(217, 70, 239, 0.5);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.9), 0 0 20px rgba(217, 70, 239, 0.7), 0 0 30px rgba(236, 72, 153, 0.5);
+  }
+}
+
 /* Effet de bordure néon */
 .neon-border {
   box-shadow: 0 0 5px rgba(139, 92, 246, 0.5), 0 0 20px rgba(139, 92, 246, 0.3);

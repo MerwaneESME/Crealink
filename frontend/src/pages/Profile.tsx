@@ -83,14 +83,16 @@ const Profile: React.FC = () => {
         photoURL,
         avatar: photoURL // Ajouter aussi l'avatar pour la compatibilité
       }, user.uid);
-
-      // Recharger la page pour voir les changements
-      window.location.reload();
-
+      
       toast({
         title: "Photo mise à jour",
-        description: "Votre photo de profil a été mise à jour avec succès.",
+        description: "Votre photo de profil a été mise à jour avec succès. La page va être rechargée.",
       });
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
     } catch (error: any) {
       console.error('Erreur lors de la mise à jour de la photo:', error);
       toast({
@@ -172,14 +174,22 @@ const Profile: React.FC = () => {
         </h1>
         
         <div className="flex flex-col items-center mb-8">
-          <div className="relative group">
-            <Avatar className="w-32 h-32 cursor-pointer" onClick={handlePhotoClick}>
-              <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+          <div className="relative mb-4">
+            <Avatar className="w-32 h-32 group cursor-pointer" onClick={handlePhotoClick}>
+              {isLoading ? (
+                <div className="w-full h-full flex items-center justify-center bg-purple-900/20 rounded-full">
+                  <div className="w-8 h-8 border-4 border-t-purple-500 border-purple-200 rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <>
+                  <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </>
+              )}
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                <Camera className="w-6 h-6 text-white" />
+              </div>
             </Avatar>
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <Camera className="w-6 h-6 text-white" />
-            </div>
           </div>
           <p className="text-sm text-gray-400 mt-2 flex items-center gap-2">
             <Camera className="w-4 h-4" />
@@ -193,6 +203,7 @@ const Profile: React.FC = () => {
             onChange={handlePhotoChange}
             aria-label="Changer la photo de profil"
           />
+          {isLoading && <p className="text-sm text-purple-300 mt-2">Téléchargement en cours...</p>}
         </div>
         
         <Tabs defaultValue="profile" className="space-y-6">

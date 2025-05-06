@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import NeonLogo from '../components/NeonLogo';
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -50,10 +51,6 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
             <div className={`transition-all duration-700 ${isLoaded ? 'opacity-100 transform-none' : 'opacity-0 translate-y-10'}`}>
-              {/* CREALINK en néon */}
-              <h1 className="text-5xl sm:text-7xl md:text-8xl font-extrabold tracking-tight mb-6 neon-text animate-neon-pulse text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
-                CREALINK
-              </h1>
               
               {/* Slogan avec mots mis en évidence - adapté selon le rôle */}
               {user ? (

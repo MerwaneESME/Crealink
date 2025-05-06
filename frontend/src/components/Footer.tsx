@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Youtube, Github } from "lucide-react";
+import NeonLogo from './NeonLogo';
 
 export default function Footer() {
   return (
@@ -11,8 +12,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <Link to="/" className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500 neon-text">
-              CREALINK
+            <Link to="/" className="block">
+              <NeonLogo size="sm" />
             </Link>
             <p className="text-gray-400 text-sm">
               Connectez les créateurs aux experts dont ils ont besoin pour développer leur présence en ligne.
