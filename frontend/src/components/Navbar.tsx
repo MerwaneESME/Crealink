@@ -16,6 +16,7 @@ import { Menu, X, Bell } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Badge } from '@/components/ui/badge';
+import NeonLogo from './NeonLogo';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -119,12 +120,13 @@ export default function Navbar() {
       
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-              CREALINK
-            </span>
-          </Link>
+          {/* Logo et Texte */}
+          <div className="flex items-center">
+            <Link to="/" aria-label="Accueil">
+              <NeonLogo size="sm" showText={false} />
+            </Link>
+            <span className="ml-2 text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 glow-text">CREALINK</span>
+          </div>
 
           {/* Navigation principale - Desktop */}
           <nav className="hidden md:flex space-x-6">
