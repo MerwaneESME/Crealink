@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { storageService } from "@/services/storageService";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Camera } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { user, updateUserProfile } = useAuth();
@@ -74,16 +75,24 @@ const Profile: React.FC = () => {
 
     setIsLoading(true);
     try {
+      // Upload de la photo
       const photoURL = await storageService.uploadProfilePhoto(file, user.uid);
+      
+      // Mise à jour du profil utilisateur avec la nouvelle URL de la photo
       await updateUserProfile({
-        ...formData,
-        photoURL
+        photoURL,
+        avatar: photoURL // Ajouter aussi l'avatar pour la compatibilité
       }, user.uid);
+
+      // Recharger la page pour voir les changements
+      window.location.reload();
+
       toast({
         title: "Photo mise à jour",
         description: "Votre photo de profil a été mise à jour avec succès.",
       });
     } catch (error: any) {
+      console.error('Erreur lors de la mise à jour de la photo:', error);
       toast({
         title: "Erreur",
         description: error.message || "Une erreur est survenue lors de la mise à jour de la photo.",
@@ -169,15 +178,20 @@ const Profile: React.FC = () => {
               <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <span className="text-white text-sm">Changer la photo</span>
+              <Camera className="w-6 h-6 text-white" />
             </div>
           </div>
+          <p className="text-sm text-gray-400 mt-2 flex items-center gap-2">
+            <Camera className="w-4 h-4" />
+            Cliquez sur votre photo pour la modifier
+          </p>
           <input
             type="file"
             ref={fileInputRef}
             className="hidden"
             accept="image/*"
             onChange={handlePhotoChange}
+            aria-label="Changer la photo de profil"
           />
         </div>
         

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Simuler un temps de chargement pour les animations
@@ -53,14 +55,25 @@ export default function Home() {
                 CREALINK
               </h1>
               
-              {/* Slogan avec mots mis en évidence */}
-              <p className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4">
-                Connectez les <span className="text-purple-400 font-bold">créateurs</span> aux <span className="text-pink-500 font-bold">experts</span> dont ils ont besoin
-              </p>
-              
-              <p className="mt-3 max-w-md mx-auto text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-                Trouvez les talents techniques pour développer votre présence en ligne.
-              </p>
+              {/* Slogan avec mots mis en évidence - adapté selon le rôle */}
+              {user ? (
+                <p className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4">
+                  {user.role === 'expert' ? (
+                    <>Trouvez les <span className="text-purple-400 font-bold">créateurs</span> qui ont besoin de vous</>
+                  ) : (
+                    <>Trouvez les <span className="text-pink-500 font-bold">experts</span> dont vous avez besoin</>
+                  )}
+                </p>
+              ) : (
+                <>
+                  <p className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4">
+                    Connectez les <span className="text-purple-400 font-bold">créateurs</span> aux <span className="text-pink-500 font-bold">experts</span> dont ils ont besoin
+                  </p>
+                  <p className="mt-3 max-w-md mx-auto text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+                    Trouvez les talents techniques pour développer votre présence en ligne.
+                  </p>
+                </>
+              )}
               
               <div className="mt-8 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
                 <div className="relative group">
@@ -71,13 +84,15 @@ export default function Home() {
                     </Button>
                   </Link>
                 </div>
-                <div className="mt-3 sm:mt-0 sm:ml-3">
-                  <Link to="/register">
-                    <Button variant="outline" className="w-full px-8 py-3 text-base font-medium rounded-md border-purple-500 text-purple-100 hover:bg-purple-900/30 hover:text-white">
-                      S'inscrire
-                    </Button>
-                  </Link>
-                </div>
+                {!user && (
+                  <div className="mt-3 sm:mt-0 sm:ml-3">
+                    <Link to="/register">
+                      <Button variant="outline" className="w-full px-8 py-3 text-base font-medium rounded-md border-purple-500 text-purple-100 hover:bg-purple-900/30 hover:text-white">
+                        S'inscrire
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -117,9 +132,13 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </div>
-                <h3 className="mt-6 text-xl font-medium text-white">1. Publiez votre offre</h3>
+                <h3 className="mt-6 text-xl font-medium text-white">
+                  {user?.role === 'expert' ? '1. Parcourez les offres' : '1. Publiez votre offre'}
+                </h3>
                 <p className="mt-2 text-base text-gray-400 text-center">
-                  Décrivez votre projet, les compétences requises et votre budget.
+                  {user?.role === 'expert' 
+                    ? 'Trouvez des projets qui correspondent à vos compétences'
+                    : 'Décrivez votre projet, les compétences requises et votre budget'}
                 </p>
               </div>
 
@@ -131,9 +150,13 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                   </svg>
                 </div>
-                <h3 className="mt-6 text-xl font-medium text-white">2. Connectez-vous avec des experts</h3>
+                <h3 className="mt-6 text-xl font-medium text-white">
+                  {user?.role === 'expert' ? '2. Connectez vous avec des créateurs' : '2. Connectez-vous avec des experts'}
+                </h3>
                 <p className="mt-2 text-base text-gray-400 text-center">
-                  Recevez des propositions d'experts qualifiés et discutez avec eux.
+                  {user?.role === 'expert'
+                    ? 'Proposez vos services aux créateurs qui vous intéressent'
+                    : 'Recevez des propositions d\'experts qualifiés et discutez avec eux'}
                 </p>
               </div>
 
@@ -163,15 +186,17 @@ export default function Home() {
             <h2 className="text-3xl font-extrabold text-white">
               Catégories d'experts
             </h2>
-            <p className="mt-4 text-lg text-gray-400">
-              Trouvez l'expert idéal pour votre projet
-            </p>
+            {!user && (
+              <p className="mt-4 text-lg text-gray-400">
+                Trouvez l'expert idéal pour votre projet
+              </p>
+            )}
           </div>
 
           <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {/* Category 1 */}
-            <Link to="/jobs?category=editeur" className="group block">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50">
+            <Link to="/jobs?category=editeur" className="group block h-full">
+              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="p-6 relative z-10">
                   <div className="flex items-center">
@@ -192,8 +217,8 @@ export default function Home() {
             </Link>
 
             {/* Category 2 */}
-            <Link to="/jobs?category=graphiste" className="group block">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50">
+            <Link to="/jobs?category=graphiste" className="group block h-full">
+              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="p-6 relative z-10">
                   <div className="flex items-center">
@@ -214,8 +239,8 @@ export default function Home() {
             </Link>
 
             {/* Category 3 */}
-            <Link to="/jobs?category=developpeur" className="group block">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50">
+            <Link to="/jobs?category=developpeur" className="group block h-full">
+              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="p-6 relative z-10">
                   <div className="flex items-center">
@@ -238,38 +263,40 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative bg-black py-16 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-pink-900/20"></div>
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-30"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-30"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white">
-              Prêt à démarrer votre projet ?
-            </h2>
-            <p className="mt-4 text-lg text-purple-200">
-              Rejoignez notre communauté de créateurs et d'experts dès aujourd'hui
-            </p>
-            <div className="mt-8">
-              <div className="inline-block relative group mx-3 mb-3">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
-                <Link to="/register">
-                  <Button variant="secondary" size="lg" className="relative bg-black text-white hover:bg-black/80 border-0">
-                    S'inscrire gratuitement
+      {/* CTA Section - affiché uniquement si l'utilisateur n'est pas connecté */}
+      {!user && (
+        <section className="relative bg-black py-16 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-pink-900/20"></div>
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-30"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-30"></div>
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="text-center">
+              <h2 className="text-3xl font-extrabold text-white">
+                Prêt à démarrer votre projet ?
+              </h2>
+              <p className="mt-4 text-lg text-purple-200">
+                Rejoignez notre communauté de créateurs et d'experts dès aujourd'hui
+              </p>
+              <div className="mt-8">
+                <div className="inline-block relative group mx-3 mb-3">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
+                  <Link to="/register">
+                    <Button variant="secondary" size="lg" className="relative bg-black text-white hover:bg-black/80 border-0">
+                      S'inscrire gratuitement
+                    </Button>
+                  </Link>
+                </div>
+                <Link to="/jobs">
+                  <Button variant="outline" size="lg" className="mx-3 bg-transparent border-purple-500 text-purple-100 hover:bg-purple-900/30 hover:text-white mb-3">
+                    Parcourir les offres
                   </Button>
                 </Link>
               </div>
-              <Link to="/jobs">
-                <Button variant="outline" size="lg" className="mx-3 bg-transparent border-purple-500 text-purple-100 hover:bg-purple-900/30 hover:text-white mb-3">
-                  Parcourir les offres
-                </Button>
-              </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 } 
