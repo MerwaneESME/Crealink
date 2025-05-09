@@ -1,13 +1,132 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import NeonLogo from '../components/NeonLogo';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+// Liste des corps de métier disponibles
+const METIERS = [
+  {
+    id: 'developpement-web',
+    title: 'Développement Web',
+    description: 'Sites web, applications, intégrations',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    )
+  },
+  {
+    id: 'design-graphique',
+    title: 'Design Graphique',
+    description: 'Logos, miniatures, bannières',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+      </svg>
+    )
+  },
+  {
+    id: 'marketing-digital',
+    title: 'Marketing Digital',
+    description: 'SEO, réseaux sociaux, publicité',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+      </svg>
+    )
+  },
+  {
+    id: 'production-video',
+    title: 'Production Vidéo',
+    description: 'Montage, animations, effets spéciaux',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    )
+  },
+  {
+    id: 'photographie',
+    title: 'Photographie',
+    description: 'Photos professionnelles, retouche',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    )
+  },
+  {
+    id: 'redaction',
+    title: 'Rédaction',
+    description: 'Articles, scripts, contenus web',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    )
+  },
+  {
+    id: 'montage-video',
+    title: 'Montage Vidéo',
+    description: 'Montage, post-production',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+      </svg>
+    )
+  },
+  {
+    id: 'animation-3d',
+    title: 'Animation 3D',
+    description: 'Modélisation, animation, rendu',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+      </svg>
+    )
+  },
+  {
+    id: 'motion-design',
+    title: 'Motion Design',
+    description: 'Animations graphiques, motion',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    )
+  },
+  {
+    id: 'community-management',
+    title: 'Community Management',
+    description: 'Gestion de communautés, modération',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    )
+  },
+  {
+    id: 'seo-sea',
+    title: 'SEO/SEA',
+    description: 'Référencement, publicité en ligne',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    )
+  }
+];
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const { user } = useAuth();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Simuler un temps de chargement pour les animations
@@ -15,6 +134,21 @@ export default function Home() {
       setIsLoaded(true);
     }, 500);
   }, []);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const cardWidth = 316; // 300px (largeur de la carte) + 16px (gap)
+      const newScrollLeft = direction === 'left' 
+        ? container.scrollLeft - cardWidth
+        : container.scrollLeft + cardWidth;
+      
+      container.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col">
@@ -190,72 +324,56 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Category 1 */}
-            <Link to="/jobs?category=editeur" className="group block h-full">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                      </svg>
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">Éditeurs Vidéo</h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        Montage, animations, effets spéciaux
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
+          <div className="mt-10 relative">
+            {/* Bouton de navigation gauche */}
+            <button
+              onClick={() => handleScroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 p-2 rounded-full text-white hover:bg-purple-900/80 transition-colors"
+              title="Défiler vers la gauche"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
 
-            {/* Category 2 */}
-            <Link to="/jobs?category=graphiste" className="group block h-full">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                      </svg>
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">Graphistes</h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        Logos, miniatures, bannières
-                      </p>
+            {/* Conteneur de défilement */}
+            <div
+              ref={scrollContainerRef}
+              className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {METIERS.map((metier) => (
+                <Link
+                  key={metier.id}
+                  to={`/jobs?category=${metier.title.toLowerCase().replace(/\s+/g, '-')}#top`}
+                  className="flex-none w-[300px] group"
+                >
+                  <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="p-6 relative z-10">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                          {metier.icon}
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-lg font-medium text-white">{metier.title}</h3>
+                          <p className="mt-1 text-sm text-gray-400">
+                            {metier.description}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </Link>
+                </Link>
+              ))}
+            </div>
 
-            {/* Category 3 */}
-            <Link to="/jobs?category=developpeur" className="group block h-full">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                      </svg>
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">Développeurs</h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        Sites web, applications, intégrations
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
+            {/* Bouton de navigation droite */}
+            <button
+              onClick={() => handleScroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 p-2 rounded-full text-white hover:bg-purple-900/80 transition-colors"
+              title="Défiler vers la droite"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
           </div>
         </div>
       </section>
@@ -284,11 +402,6 @@ export default function Home() {
                     </Button>
                   </Link>
                 </div>
-                <Link to="/jobs">
-                  <Button variant="outline" size="lg" className="mx-3 bg-transparent border-purple-500 text-purple-100 hover:bg-purple-900/30 hover:text-white mb-3">
-                    Parcourir les offres
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>

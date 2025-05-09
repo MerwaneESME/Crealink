@@ -150,16 +150,18 @@ export default function Navbar() {
             >
               Offres
             </Link>
-            <Link 
-              to="/profiles" 
-              className={`text-sm hover:text-purple-400 transition-colors ${
-                location.pathname.includes('/profiles') 
-                  ? 'text-purple-400' 
-                  : 'text-gray-300'
-              }`}
-            >
-              Profils
-            </Link>
+            {user && (
+              <Link 
+                to="/profiles" 
+                className={`text-sm hover:text-purple-400 transition-colors ${
+                  location.pathname.includes('/profiles') 
+                    ? 'text-purple-400' 
+                    : 'text-gray-300'
+                }`}
+              >
+                Profils
+              </Link>
+            )}
             {!user && (
               <Link 
                 to="/about" 
@@ -435,15 +437,17 @@ export default function Navbar() {
             >
               Offres
             </Link>
-            <Link
-              to="/profiles"
-              className={`text-sm hover:text-purple-400 transition-colors ${
-                location.pathname.includes('/profiles') ? 'text-purple-400' : 'text-gray-300'
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Profils
-            </Link>
+            {user && (
+              <Link
+                to="/profiles"
+                className={`text-sm hover:text-purple-400 transition-colors ${
+                  location.pathname.includes('/profiles') ? 'text-purple-400' : 'text-gray-300'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Profils
+              </Link>
+            )}
             {!user && (
               <Link
                 to="/about"

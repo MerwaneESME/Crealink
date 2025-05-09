@@ -12,6 +12,25 @@ import { db } from '@/config/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Liste des corps de métier disponibles
+const METIERS = [
+  'Développement Web',
+  'Design Graphique',
+  'Marketing Digital',
+  'Production Vidéo',
+  'Photographie',
+  'Rédaction',
+  'Montage Vidéo',
+  'Animation 3D',
+  'Motion Design',
+  'Community Management',
+  'SEO/SEA',
+  'Autre'
+] as const;
+
+type Metier = typeof METIERS[number];
 
 interface Job {
   id: string;
@@ -23,6 +42,7 @@ interface Job {
   creatorId: string;
   creatorName: string;
   status: 'open' | 'closed';
+  metier?: Metier;
 }
 
 const CreatorDashboard: React.FC = () => {
@@ -40,6 +60,7 @@ const CreatorDashboard: React.FC = () => {
     description: '',
     budget: '',
     deadline: '',
+    metier: '',
   });
 
   // Détecter si l'utilisateur est arrivé avec des paramètres pour proposer une offre à un expert
@@ -302,6 +323,7 @@ const CreatorDashboard: React.FC = () => {
         description: '',
         budget: '',
         deadline: '',
+        metier: '',
       });
       
       // Rafraîchir la liste des annonces
@@ -443,6 +465,26 @@ const CreatorDashboard: React.FC = () => {
                       required
                       disabled={isSubmitting}
                     />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="metier">Corps de métier</Label>
+                    <Select
+                      value={formData.metier}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, metier: value }))}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez un corps de métier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {METIERS.map((metier) => (
+                          <SelectItem key={metier} value={metier}>
+                            {metier}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">

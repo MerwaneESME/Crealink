@@ -8,8 +8,12 @@ import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, X, ChevronDown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 interface Job {
   id: string;
@@ -21,7 +25,24 @@ interface Job {
   creatorId: string;
   creatorName: string;
   status: 'open' | 'closed';
+  metier?: string;
 }
+
+// Liste des corps de métier disponibles
+const METIERS = [
+  'Développement Web',
+  'Design Graphique',
+  'Marketing Digital',
+  'Production Vidéo',
+  'Photographie',
+  'Rédaction',
+  'Montage Vidéo',
+  'Animation 3D',
+  'Motion Design',
+  'Community Management',
+  'SEO/SEA',
+  'Autre'
+];
 
 const Jobs: React.FC = () => {
   const { user } = useAuth();
@@ -33,6 +54,8 @@ const Jobs: React.FC = () => {
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [selectedMetiers, setSelectedMetiers] = useState<string[]>([]);
+  const [searchParams] = useSearchParams();
 
   console.log("Rendu du composant Jobs", { user });
 
@@ -40,6 +63,18 @@ const Jobs: React.FC = () => {
     console.log("useEffect Jobs", { user });
     fetchJobs();
   }, [user]); // user est optionnel ici car déjà vérifié par ProtectedRoute
+
+  useEffect(() => {
+    // Récupérer la catégorie depuis l'URL
+    const category = searchParams.get('category');
+    if (category) {
+      // Trouver le métier correspondant à l'ID de la catégorie
+      const metier = METIERS.find(m => m.toLowerCase().replace(/\s+/g, '-') === category);
+      if (metier) {
+        setSelectedMetiers([metier]);
+      }
+    }
+  }, [searchParams]);
 
   const fetchJobs = async () => {
     console.log("Début fetchJobs");
@@ -81,7 +116,8 @@ const Jobs: React.FC = () => {
           createdAt: createdAtISO,
           creatorId: data.creatorId || '',
           creatorName: data.creatorName || 'Utilisateur anonyme',
-          status: data.status || 'open'
+          status: data.status || 'open',
+          metier: data.metier || undefined
         };
       });
       
@@ -126,9 +162,16 @@ const Jobs: React.FC = () => {
     if (filterStatus !== 'all') {
       filtered = filtered.filter(job => job.status === filterStatus);
     }
+
+    // Filtre par corps de métier
+    if (selectedMetiers.length > 0) {
+      filtered = filtered.filter(job => 
+        selectedMetiers.includes(job.metier || 'Autre')
+      );
+    }
     
     setFilteredJobs(filtered);
-  }, [searchTerm, filterStatus, jobs]);
+  }, [searchTerm, filterStatus, selectedMetiers, jobs]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -136,6 +179,16 @@ const Jobs: React.FC = () => {
 
   const handleFilterChange = (status: 'all' | 'open' | 'closed') => {
     setFilterStatus(status);
+  };
+
+  const handleMetierChange = (metier: string) => {
+    setSelectedMetiers(prev => {
+      if (prev.includes(metier)) {
+        return prev.filter(m => m !== metier);
+      } else {
+        return [...prev, metier];
+      }
+    });
   };
 
   const handleJobClick = (jobId: string) => {
@@ -146,7 +199,7 @@ const Jobs: React.FC = () => {
   console.log("Avant rendu JSX", { isLoading, error, jobsLength: jobs.length });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
+    <div id="top" className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
           Offres
@@ -195,6 +248,53 @@ const Jobs: React.FC = () => {
                 Fermées
               </Button>
             </div>
+          </div>
+
+          {/* Menu déroulant pour les corps de métier */}
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[200px] justify-between">
+                  <span>Corps de métier</span>
+                  <ChevronDown className="h-4 w-4" />
+                  {selectedMetiers.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedMetiers.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-4">
+                <div className="space-y-2">
+                  {METIERS.map((metier) => (
+                    <div key={metier} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={metier}
+                        checked={selectedMetiers.includes(metier)}
+                        onCheckedChange={() => handleMetierChange(metier)}
+                      />
+                      <label
+                        htmlFor={metier}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {metier}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            {selectedMetiers.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedMetiers([])}
+                className="h-8 px-2"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Effacer
+              </Button>
+            )}
           </div>
           
           {user?.role === 'creator' && (
