@@ -289,7 +289,7 @@ export default function Navbar() {
                 </Link>
                 <Link to="/register">
                   <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg blur opacity-60 group-hover:opacity-100 transition duration-200"></div>
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg blur opacity-60 group-hover:opacity-100 transition duration-200"></div>
                     <Button className="relative bg-black hover:bg-black/80 text-white border-0">
                       S'inscrire
                     </Button>
@@ -397,7 +397,6 @@ export default function Navbar() {
             <button
               className="text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Menu mobile"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
