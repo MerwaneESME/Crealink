@@ -1,8 +1,25 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import NeonLogo from '../components/NeonLogo';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+// Liste des corps de métier disponibles
+const METIERS = [
+  'Développement Web',
+  'Design Graphique',
+  'Marketing Digital',
+  'Production Vidéo',
+  'Photographie',
+  'Rédaction',
+  'Montage Vidéo',
+  'Animation 3D',
+  'Motion Design',
+  'Community Management',
+  'SEO/SEA',
+  'Autre'
+];
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -190,72 +207,338 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Category 1 */}
-            <Link to="/jobs?category=editeur" className="group block h-full">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                      </svg>
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">Éditeurs Vidéo</h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        Montage, animations, effets spéciaux
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
+          <div className="mt-10 relative">
+            {/* Flèche gauche */}
+            <button 
+              onClick={() => {
+                const container = document.getElementById('categories-container');
+                if (container) {
+                  const scrollAmount = 300;
+                  const currentScroll = container.scrollLeft;
+                  const maxScroll = container.scrollWidth - container.clientWidth;
+                  
+                  if (currentScroll <= 0) {
+                    // Si on est au début, on va à la fin
+                    container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+                  } else {
+                    // Sinon on défile normalement vers la gauche
+                    container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                  }
+                }
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-black/80 p-2 rounded-full border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300"
+              title="Défiler vers la gauche"
+            >
+              <ChevronLeft className="h-6 w-6 text-purple-400" />
+            </button>
 
-            {/* Category 2 */}
-            <Link to="/jobs?category=graphiste" className="group block h-full">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                      </svg>
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">Graphistes</h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        Logos, miniatures, bannières
-                      </p>
+            {/* Container des catégories avec défilement */}
+            <div 
+              id="categories-container"
+              className="flex overflow-x-auto gap-4 pb-4 px-16 mx-auto max-w-[1200px] scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {/* Catégorie 1 - Développement Web */}
+              <Link 
+                to="/jobs?category=developpement-web"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Développement Web</h3>
+                        <p className="text-sm text-gray-400">
+                          Sites web, applications, intégrations et solutions techniques sur mesure
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
 
-            {/* Category 3 */}
-            <Link to="/jobs?category=developpeur" className="group block h-full">
-              <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 h-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                      </svg>
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-lg font-medium text-white">Développeurs</h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        Sites web, applications, intégrations
-                      </p>
+              {/* Catégorie 2 - Design Graphique */}
+              <Link 
+                to="/jobs?category=design-graphique"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Design Graphique</h3>
+                        <p className="text-sm text-gray-400">
+                          Logos, identité visuelle, supports de communication et créations graphiques
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+
+              {/* Catégorie 3 - Production Vidéo */}
+              <Link 
+                to="/jobs?category=production-video"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Production Vidéo</h3>
+                        <p className="text-sm text-gray-400">
+                          Montage, animations, effets spéciaux et production audiovisuelle
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 4 - Marketing Digital */}
+              <Link 
+                to="/jobs?category=marketing-digital"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Marketing Digital</h3>
+                        <p className="text-sm text-gray-400">
+                          Stratégie marketing, réseaux sociaux, publicité en ligne
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 5 - Photographie */}
+              <Link 
+                to="/jobs?category=photographie"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Photographie</h3>
+                        <p className="text-sm text-gray-400">
+                          Photos professionnelles, retouche, direction artistique
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 6 - Rédaction */}
+              <Link 
+                to="/jobs?category=redaction"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Rédaction</h3>
+                        <p className="text-sm text-gray-400">
+                          Contenu web, articles, scripts et textes créatifs
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 7 - Animation 3D */}
+              <Link 
+                to="/jobs?category=animation-3d"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Animation 3D</h3>
+                        <p className="text-sm text-gray-400">
+                          Modélisation 3D, animation, rendu et effets spéciaux
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 8 - Motion Design */}
+              <Link 
+                to="/jobs?category=motion-design"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Motion Design</h3>
+                        <p className="text-sm text-gray-400">
+                          Animations graphiques, transitions et effets visuels
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 9 - Community Management */}
+              <Link 
+                to="/jobs?category=community-management"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Community Management</h3>
+                        <p className="text-sm text-gray-400">
+                          Gestion de communauté, modération et engagement social
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 10 - SEO/SEA */}
+              <Link 
+                to="/jobs?category=seo-sea"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">SEO/SEA</h3>
+                        <p className="text-sm text-gray-400">
+                          Référencement naturel, publicité en ligne et optimisation
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Catégorie 11 - Autre */}
+              <Link 
+                to="/jobs?category=autre"
+                className="group block flex-shrink-0"
+              >
+                <div className="relative bg-black/80 overflow-hidden shadow-lg shadow-purple-500/10 rounded-lg transition-all duration-300 group-hover:shadow-purple-500/30 border border-purple-500/20 group-hover:border-purple-500/50 w-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 bg-purple-900/30 rounded-md p-3 text-purple-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-medium text-white">Autre</h3>
+                        <p className="text-sm text-gray-400">
+                          Autres compétences et services créatifs
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            {/* Flèche droite */}
+            <button 
+              onClick={() => {
+                const container = document.getElementById('categories-container');
+                if (container) {
+                  const scrollAmount = 300;
+                  const currentScroll = container.scrollLeft;
+                  const maxScroll = container.scrollWidth - container.clientWidth;
+                  
+                  if (currentScroll >= maxScroll) {
+                    // Si on est à la fin, on retourne au début
+                    container.scrollTo({ left: 0, behavior: 'smooth' });
+                  } else {
+                    // Sinon on défile normalement vers la droite
+                    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                  }
+                }
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-black/80 p-2 rounded-full border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300"
+              title="Défiler vers la droite"
+            >
+              <ChevronRight className="h-6 w-6 text-purple-400" />
+            </button>
           </div>
         </div>
       </section>
