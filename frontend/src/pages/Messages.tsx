@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { useNavigate } from 'react-router-dom';
 
 // Types
 interface Message {
@@ -154,50 +155,46 @@ const sampleMessages: Record<string, Message[]> = {
 };
 
 export default function Messages() {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Simuler un chargement depuis Firebase
-    setLoading(true);
-    setTimeout(() => {
-      setContacts(sampleContacts);
-      setLoading(false);
-    }, 800);
+    // Simuler le chargement des contacts
+    setContacts(sampleContacts);
   }, []);
 
   useEffect(() => {
     if (selectedContact) {
       setMessages(sampleMessages[selectedContact] || []);
-      scrollToBottom();
+      // Défiler vers le dernier message dans la zone de conversation
+      const messagesContainer = document.querySelector('.messages-container');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
     }
   }, [selectedContact]);
 
-  const handleContactSelect = (contactId: string) => {
+  const handleSelectConversation = (contactId: string) => {
     setSelectedContact(contactId);
-    
-    // Marquer les messages comme lus
-    const updatedContacts = contacts.map(contact => {
-      if (contact.id === contactId) {
-        return { ...contact, unreadCount: 0 };
-      }
-      return contact;
-    });
-    
-    setContacts(updatedContacts);
   };
 
-  const handleSendMessage = () => {
+  const handleUserClick = (userId: string) => {
+    navigate(`/profile/${userId}`);
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newMessage.trim() || !selectedContact) return;
     
     const newMsg: Message = {
       id: `new-${Date.now()}`,
-      senderId: 'currentUser',
+      senderId: user?.uid || '',
       receiverId: selectedContact,
       content: newMessage,
       timestamp: { seconds: Date.now() / 1000 },
@@ -206,12 +203,13 @@ export default function Messages() {
     
     setMessages(prev => [...prev, newMsg]);
     setNewMessage('');
-    scrollToBottom();
-  };
-
-  const scrollToBottom = () => {
+    
+    // Défiler vers le dernier message dans la zone de conversation
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const messagesContainer = document.querySelector('.messages-container');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
     }, 100);
   };
 
@@ -256,151 +254,139 @@ export default function Messages() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Messages</h1>
-      
-      <Card className="shadow-sm">
-        <div className="grid md:grid-cols-[300px_1fr] h-[600px]">
-          {/* Liste des contacts */}
-          <div className="border-r">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Conversations</CardTitle>
-            </CardHeader>
-            
-            {loading ? (
-              <div className="flex justify-center items-center h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : contacts.length === 0 ? (
-              <div className="text-center p-6 text-gray-500">
-                <p>Aucune conversation à afficher</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[525px]">
-                <div className="flex flex-col">
-                  {contacts.map((contact) => (
-                    <button
-                      key={contact.id}
-                      className={`flex items-center p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800 relative ${
-                        selectedContact === contact.id ? 'bg-gray-100 dark:bg-gray-800' : ''
-                      }`}
-                      onClick={() => handleContactSelect(contact.id)}
-                    >
-                      <Avatar className="h-10 w-10 mr-3">
-                        <AvatarImage src={contact.avatar} alt={contact.name} />
-                        <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium truncate">{contact.name}</span>
-                          <span className="text-xs text-gray-500">
-                            {formatContactDate(contact.lastMessageDate.seconds)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 truncate">{contact.lastMessage}</p>
-                      </div>
-                      {contact.unreadCount > 0 && (
-                        <span className="absolute top-3 right-3 flex items-center justify-center w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full">
-                          {contact.unreadCount}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-          </div>
-          
-          {/* Zone de messages */}
-          <div className="flex flex-col">
-            {selectedContact ? (
-              <>
-                <CardHeader className="py-3 border-b">
-                  <div className="flex items-center">
-                    <Avatar className="h-9 w-9 mr-2">
-                      <AvatarImage 
-                        src={contacts.find(c => c.id === selectedContact)?.avatar} 
-                        alt={contacts.find(c => c.id === selectedContact)?.name} 
-                      />
-                      <AvatarFallback>
-                        {getInitials(contacts.find(c => c.id === selectedContact)?.name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <CardTitle className="text-base">
-                      {contacts.find(c => c.id === selectedContact)?.name}
-                    </CardTitle>
+    <div className="container mx-auto px-4 pt-20 pb-8">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-white">Messages</h1>
+        {user?.role === 'expert' && (
+          <Button
+            onClick={() => navigate('/jobs')}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            Trouver des projets
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Liste des conversations */}
+        <div className="md:col-span-1 bg-black/50 rounded-lg border border-purple-500/20 p-4">
+          <div className="space-y-4">
+            {contacts.map((contact) => (
+              <div
+                key={contact.id}
+                onClick={() => handleSelectConversation(contact.id)}
+                className={`p-4 rounded-lg cursor-pointer transition-colors ${
+                  selectedContact === contact.id
+                    ? 'bg-purple-900/30 border border-purple-500/50'
+                    : 'bg-black/50 border border-purple-500/20 hover:bg-purple-900/20'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                      <span className="text-xl text-purple-400">
+                        {getInitials(contact.name).charAt(0)}
+                      </span>
+                    </div>
                   </div>
-                </CardHeader>
-                
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div 
-                        key={message.id} 
-                        className={`flex ${message.senderId === 'currentUser' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div 
-                          className={`max-w-[80%] rounded-lg p-3 ${
-                            message.senderId === 'currentUser' 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'bg-gray-100 dark:bg-gray-800'
-                          }`}
-                        >
-                          <p>{message.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            message.senderId === 'currentUser' 
-                              ? 'text-primary-foreground/80' 
-                              : 'text-gray-500'
-                          }`}>
-                            {formatMessageDate(message.timestamp.seconds)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
+                      {contact.name}
+                    </p>
+                    <p className="text-sm text-gray-400 truncate">
+                      {contact.lastMessage}
+                    </p>
                   </div>
-                </ScrollArea>
-                
-                <div className="border-t p-3 flex items-center">
-                  <Input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Écrivez votre message..."
-                    className="flex-1 mr-2"
-                  />
-                  <Button onClick={handleSendMessage} size="sm">
-                    Envoyer
-                  </Button>
+                  {contact.unreadCount > 0 && (
+                    <div className="flex-shrink-0">
+                      <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-purple-600 rounded-full">
+                        {contact.unreadCount}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                <div className="mb-4 w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-8 h-8 text-gray-500"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium mb-2">Vos messages</h3>
-                <p className="text-sm text-gray-500 max-w-md">
-                  Sélectionnez une conversation pour afficher les messages ou commencez une nouvelle discussion depuis les offres d'emploi.
-                </p>
               </div>
-            )}
+            ))}
           </div>
         </div>
-      </Card>
+
+        {/* Zone de conversation */}
+        <div className="md:col-span-2 bg-black/50 rounded-lg border border-purple-500/20">
+          {selectedContact ? (
+            <div className="flex flex-col h-[600px]">
+              {/* En-tête de la conversation */}
+              <div className="p-4 border-b border-purple-500/20">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-purple-900/30 flex items-center justify-center">
+                      <span className="text-lg text-purple-400">
+                        {getInitials(contacts.find(c => c.id === selectedContact)?.name || '').charAt(0)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 
+                      className="text-lg font-medium text-white cursor-pointer hover:text-purple-400 transition-colors"
+                      onClick={() => handleUserClick(selectedContact)}
+                    >
+                      {contacts.find(c => c.id === selectedContact)?.name}
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      {formatContactDate(contacts.find(c => c.id === selectedContact)?.lastMessageDate.seconds || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 messages-container" ref={messagesEndRef}>
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.senderId === user?.uid ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[70%] rounded-lg p-3 ${
+                        message.senderId === user?.uid
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-800 text-gray-100'
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <p className="text-xs mt-1 opacity-70">
+                        {formatMessageDate(message.timestamp.seconds)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Zone de saisie */}
+              <div className="p-4 border-t border-purple-500/20">
+                <form onSubmit={handleSendMessage} className="flex space-x-2">
+                  <Input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Écrivez votre message..."
+                    className="flex-1 bg-black/50 border-purple-500/20 text-white"
+                  />
+                  <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
+                    Envoyer
+                  </Button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[600px] flex items-center justify-center">
+              <p className="text-gray-400">Sélectionnez une conversation pour commencer</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 
