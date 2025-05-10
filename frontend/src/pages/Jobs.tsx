@@ -8,8 +8,12 @@ import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, X, ChevronDown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 interface Job {
   id: string;
@@ -21,18 +25,37 @@ interface Job {
   creatorId: string;
   creatorName: string;
   status: 'open' | 'closed';
+  metier?: string;
 }
+
+// Liste des corps de métier disponibles
+const METIERS = [
+  'Développement Web',
+  'Design Graphique',
+  'Marketing Digital',
+  'Production Vidéo',
+  'Photographie',
+  'Rédaction',
+  'Montage Vidéo',
+  'Animation 3D',
+  'Motion Design',
+  'Community Management',
+  'SEO/SEA',
+  'Autre'
+];
 
 const Jobs: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Commencer avec chargement actif
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'closed'>('all');
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [selectedMetiers, setSelectedMetiers] = useState<string[]>([]);
+  const [searchParams] = useSearchParams();
 
   console.log("Rendu du composant Jobs", { user });
 
@@ -40,6 +63,21 @@ const Jobs: React.FC = () => {
     console.log("useEffect Jobs", { user });
     fetchJobs();
   }, [user]); // user est optionnel ici car déjà vérifié par ProtectedRoute
+
+  useEffect(() => {
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    const category = searchParams.get('category');
+    if (category) {
+      const categoryName = category.split('-').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      setSelectedMetiers([categoryName]);
+    }
+  }, [searchParams]);
 
   const fetchJobs = async () => {
     console.log("Début fetchJobs");
@@ -81,7 +119,8 @@ const Jobs: React.FC = () => {
           createdAt: createdAtISO,
           creatorId: data.creatorId || '',
           creatorName: data.creatorName || 'Utilisateur anonyme',
-          status: data.status || 'open'
+          status: data.status || 'open',
+          metier: data.metier || undefined
         };
       });
       
@@ -111,14 +150,25 @@ const Jobs: React.FC = () => {
     }
   };
 
+  // Fonction pour normaliser le texte (enlever les accents, espaces, mettre en minuscules)
+  const normalizeText = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Enlève les accents
+      .replace(/\s+/g, '') // Enlève tous les espaces
+      .trim();
+  };
+
   useEffect(() => {
     let filtered = jobs;
     
-    // Filtre par terme de recherche
+    // Filtre par terme de recherche avec normalisation
     if (searchTerm) {
+      const normalizedSearchTerm = normalizeText(searchTerm);
       filtered = filtered.filter(job => 
-        job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        job.description.toLowerCase().includes(searchTerm.toLowerCase())
+        normalizeText(job.title).includes(normalizedSearchTerm) || 
+        normalizeText(job.description).includes(normalizedSearchTerm)
       );
     }
     
@@ -126,16 +176,33 @@ const Jobs: React.FC = () => {
     if (filterStatus !== 'all') {
       filtered = filtered.filter(job => job.status === filterStatus);
     }
+
+    // Filtre par corps de métier
+    if (selectedMetiers.length > 0) {
+      filtered = filtered.filter(job => 
+        selectedMetiers.includes(job.metier || 'Autre')
+      );
+    }
     
     setFilteredJobs(filtered);
-  }, [searchTerm, filterStatus, jobs]);
+  }, [searchTerm, filterStatus, selectedMetiers, jobs]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
-  const handleFilterChange = (status: 'all' | 'open' | 'closed') => {
+  const handleStatusChange = (status: 'all' | 'open' | 'closed') => {
     setFilterStatus(status);
+  };
+
+  const handleMetierChange = (metier: string) => {
+    setSelectedMetiers(prev => {
+      if (prev.includes(metier)) {
+        return prev.filter(m => m !== metier);
+      } else {
+        return [...prev, metier];
+      }
+    });
   };
 
   const handleJobClick = (jobId: string) => {
@@ -156,45 +223,85 @@ const Jobs: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <Input
+                  type="text"
                   placeholder="Rechercher une offre..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="pl-10 pr-10"
+                  className="pl-10 bg-black/50 border-purple-500/20 focus:border-purple-500"
                 />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                {searchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-2"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
             </div>
             <div className="flex gap-2">
               <Button 
                 variant={filterStatus === 'all' ? 'default' : 'outline'}
-                onClick={() => handleFilterChange('all')}
+                onClick={() => handleStatusChange('all')}
+                className="bg-black/50 border-purple-500/20 hover:bg-purple-900/30"
               >
                 Toutes
               </Button>
               <Button 
                 variant={filterStatus === 'open' ? 'default' : 'outline'}
-                onClick={() => handleFilterChange('open')}
+                onClick={() => handleStatusChange('open')}
+                className="bg-black/50 border-purple-500/20 hover:bg-purple-900/30"
               >
                 Ouvertes
               </Button>
               <Button 
                 variant={filterStatus === 'closed' ? 'default' : 'outline'}
-                onClick={() => handleFilterChange('closed')}
+                onClick={() => handleStatusChange('closed')}
+                className="bg-black/50 border-purple-500/20 hover:bg-purple-900/30"
               >
                 Fermées
               </Button>
             </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[200px] justify-between">
+                  <span>Corps de métier</span>
+                  <ChevronDown className="h-4 w-4" />
+                  {selectedMetiers.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedMetiers.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-4">
+                <div className="space-y-2">
+                  {METIERS.map((metier) => (
+                    <div key={metier} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={metier}
+                        checked={selectedMetiers.includes(metier)}
+                        onCheckedChange={() => handleMetierChange(metier)}
+                      />
+                      <label
+                        htmlFor={metier}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {metier}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            {selectedMetiers.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedMetiers([])}
+                className="h-8 px-2"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Effacer
+              </Button>
+            )}
           </div>
           
           {user?.role === 'creator' && (
