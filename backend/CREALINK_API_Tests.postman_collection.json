@@ -1,0 +1,299 @@
+{
+	"info": {
+		"_postman_id": "8f7c43c9-e4a7-4c5a-9b5d-5b2d7e8a1234",
+		"name": "CREALINK API Tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "API Home",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "http://localhost:5000/api",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api"
+					]
+				}
+			}
+		},
+		{
+			"name": "Server Root",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "http://localhost:5000",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000"
+				}
+			}
+		},
+		{
+			"name": "Register Creator",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"creator@test.com\",\n    \"password\": \"password123\",\n    \"name\": \"Creator Test\",\n    \"role\": \"creator\",\n    \"channelInfo\": {\n        \"name\": \"My Channel\",\n        \"subscribers\": 1000,\n        \"type\": \"lifestyle\"\n    }\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				}
+			}
+		},
+		{
+			"name": "Register Expert",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"expert@test.com\",\n    \"password\": \"password123\",\n    \"name\": \"Expert Test\",\n    \"role\": \"expert\",\n    \"expertise\": {\n        \"categories\": [\"editing\", \"filming\"],\n        \"yearsOfExperience\": 5,\n        \"portfolioUrl\": \"http://example.com/portfolio\"\n    }\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				}
+			}
+		},
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"creator@test.com\",\n    \"password\": \"password123\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				}
+			}
+		},
+		{
+			"name": "Create Job",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Montage de ma vidéo lifestyle\",\n    \"description\": \"Je recherche un monteur pour ma vidéo de voyage à Paris. Durée: 15 minutes.\",\n    \"jobType\": \"creator-post\",\n    \"category\": \"editing\",\n    \"budget\": 200,\n    \"duration\": \"1 week\",\n    \"location\": \"remote\",\n    \"skills\": [\"Premiere Pro\", \"After Effects\", \"Color Grading\"]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/jobs",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"jobs"
+					]
+				}
+			}
+		},
+		{
+			"name": "Get All Jobs",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "http://localhost:5000/api/jobs",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"jobs"
+					]
+				}
+			}
+		},
+		{
+			"name": "Apply to Job",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{expertToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"coverLetter\": \"Je suis très intéressé par cette offre et j'ai une grande expérience en montage vidéo.\",\n    \"proposedBudget\": 180\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/jobs/{{jobId}}/apply",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"jobs",
+						"{{jobId}}",
+						"apply"
+					]
+				}
+			}
+		},
+		{
+			"name": "Get Current User",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/auth/me",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"me"
+					]
+				}
+			}
+		},
+		{
+			"name": "Search Experts",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "http://localhost:5000/api/users/experts/search?skills=Premiere Pro&categories=editing",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"users",
+						"experts",
+						"search"
+					],
+					"query": [
+						{
+							"key": "skills",
+							"value": "Premiere Pro"
+						},
+						{
+							"key": "categories",
+							"value": "editing"
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "Create Conversation",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"jobId\": \"{{jobId}}\",\n    \"receiverId\": \"{{expertId}}\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/messages/conversations",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"messages",
+						"conversations"
+					]
+				}
+			}
+		}
+	]
+} 

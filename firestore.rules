@@ -1,0 +1,199 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier le rôle de l'utilisateur
+    function getUserRole(userId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(userId));
+      return userDoc != null ? userDoc.data.role : null;
+    }
+    
+    // Collection users
+    match /users/{userId} {
+      // Permettre la lecture du profil de l'utilisateur connecté et des profils publics
+      allow read: if request.auth != null;
+      
+      // Permettre la création et la mise à jour uniquement de son propre profil
+      allow create, update: if request.auth != null && 
+                           request.auth.uid == userId;
+      
+      // Permettre la suppression uniquement de son propre profil
+      allow delete: if request.auth != null && 
+                    request.auth.uid == userId;
+    }
+    
+    // Collection projects
+    match /projects/{projectId} {
+      // Permettre la lecture des projets pour les utilisateurs authentifiés
+      allow read: if request.auth != null;
+      
+      // Permettre la création de projets pour les experts
+      allow create: if request.auth != null && 
+                    getUserRole(request.auth.uid) == 'expert' && 
+                    request.resource.data.expertId == request.auth.uid;
+      
+      // Permettre la mise à jour et la suppression uniquement par le propriétaire
+      allow update, delete: if request.auth != null && 
+                           resource.data.expertId == request.auth.uid;
+    }
+    
+    // Collection jobs
+    match /jobs/{jobId} {
+      // Permettre la lecture des offres pour les utilisateurs authentifiés
+      allow read: if request.auth != null;
+      
+      // Permettre la création d'offres pour les créateurs et les influenceurs
+      allow create: if request.auth != null && 
+                    (getUserRole(request.auth.uid) == 'creator' || 
+                     getUserRole(request.auth.uid) == 'influencer');
+      
+      // Permettre la mise à jour et la suppression uniquement par le créateur
+      allow update, delete: if request.auth != null && 
+                           resource.data.creatorId == request.auth.uid;
+    }
+    
+    // Collection job_proposals pour les propositions d'offres aux experts
+    match /job_proposals/{proposalId} {
+      // Permettre la lecture des propositions pour l'expert ciblé et le créateur
+      allow read: if request.auth != null && 
+                   (resource.data.expertId == request.auth.uid || 
+                    resource.data.creatorId == request.auth.uid);
+      
+      // Permettre la création de propositions pour tous les utilisateurs authentifiés
+      // Nécessaire pour les créateurs et les influenceurs
+      allow create: if request.auth != null;
+      
+      // Permettre la mise à jour des propositions pour l'expert et le créateur
+      allow update: if request.auth != null && 
+                     (resource.data.expertId == request.auth.uid || 
+                      resource.data.creatorId == request.auth.uid);
+      
+      // Permettre la suppression uniquement par le créateur ou l'expert
+      allow delete: if request.auth != null && 
+                     (resource.data.creatorId == request.auth.uid ||
+                      resource.data.expertId == request.auth.uid);
+    }
+    
+    // Projects collection (for expert portfolios)
+    match /projects/{projectId} {
+      // Allow any authenticated user to read projects
+      allow read: if request.auth != null;
+      
+      // Allow experts to create projects
+      allow create: if request.auth != null && 
+                    getUserRole(request.auth.uid) == 'expert' && 
+                    request.resource.data.expertId == request.auth.uid;
+      
+      // Allow project owners to update and delete their own projects
+      allow update, delete: if request.auth != null && 
+                            resource.data.expertId == request.auth.uid;
+    }
+    
+    // Expert jobs collection (for future use)
+    match /expert_jobs/{jobId} {
+      // Allow any authenticated user to read jobs
+      allow read: if request.auth != null;
+      
+      // Allow creators to create jobs
+      allow create: if request.auth != null && 
+                     getUserRole(request.auth.uid) == 'creator' &&
+                     request.resource.data.creatorId == request.auth.uid;
+      
+      // Allow job creators to update and delete their own jobs
+      allow update, delete: if request.auth != null && 
+                             resource.data.creatorId == request.auth.uid;
+    }
+    
+    // Job applications collection
+    match /job_applications/{applicationId} {
+      // Allow reading applications where the user is either the creator of the job or the expert who applied
+      allow read: if request.auth != null && 
+                   (resource.data.expertId == request.auth.uid || 
+                    get(/databases/$(database)/documents/expert_jobs/$(resource.data.jobId)).data.creatorId == request.auth.uid);
+      
+      // Allow experts to create applications
+      allow create: if request.auth != null && 
+                     getUserRole(request.auth.uid) == 'expert' &&
+                     request.resource.data.expertId == request.auth.uid;
+      
+      // Allow updating only by the expert who applied
+      allow update: if request.auth != null && 
+                     resource.data.expertId == request.auth.uid;
+      
+      // Allow deleting only by the expert who applied
+      allow delete: if request.auth != null && 
+                     resource.data.expertId == request.auth.uid;
+    }
+    
+    // Project proposals collection
+    match /project_proposals/{proposalId} {
+      // Allow reading proposals where the user is either the creator or expert
+      allow read: if request.auth != null && 
+                   (resource.data.creatorId == request.auth.uid || 
+                    resource.data.expertId == request.auth.uid);
+      
+      // Allow creators to create proposals
+      allow create: if request.auth != null;
+      
+      // Allow updating proposals for both creator and expert
+      allow update: if request.auth != null && 
+                     (resource.data.creatorId == request.auth.uid || 
+                      resource.data.expertId == request.auth.uid);
+      
+      // Allow deleting only by the creator
+      allow delete: if request.auth != null && 
+                     resource.data.creatorId == request.auth.uid;
+    }
+    
+    // Messages collection
+    match /messages/{messageId} {
+      allow read: if request.auth != null && 
+                   (resource.data.senderId == request.auth.uid || 
+                    resource.data.receiverId == request.auth.uid);
+      allow create: if request.auth != null && 
+                     request.resource.data.senderId == request.auth.uid;
+      allow update, delete: if request.auth != null && 
+                             resource.data.senderId == request.auth.uid;
+    }
+    
+    // Contracts collection (from backend rules)
+    match /contracts/{contractId} {
+      allow read: if request.auth != null && 
+                   (resource.data.creatorId == request.auth.uid || 
+                    resource.data.expertId == request.auth.uid);
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+                     (resource.data.creatorId == request.auth.uid || 
+                      resource.data.expertId == request.auth.uid);
+    }
+  }
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Règles pour les photos de profil
+    match /profile-photos/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Règles pour les projets
+    match /projects/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+                   request.auth.uid == userId &&
+                   request.resource.size < 10 * 1024 * 1024 && // 10MB max
+                   (
+                     request.resource.contentType.matches('image/.*') ||
+                     request.resource.contentType.matches('video/.*') ||
+                     request.resource.contentType.matches('audio/.*')
+                   );
+    }
+    
+    // Règles pour les autres fichiers
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+} 
