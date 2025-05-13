@@ -1,5 +1,0 @@
-[33m5324412[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m feat: Ajout du tableau de bord créateur et corrections d'authentification
-[33m614161e[m chore: Mise à jour des .gitignore pour sécuriser les fichiers Firebase
-[33m21762a8[m feat: Amélioration de l'authentification et ajout des pages d'onboarding
-[33mebe3d10[m Refonte complète avec intégration Firebase, restructuration frontend/backend et mise à jour de l'UI
-[33md1f858a[m Intégration de Firebase pour l'authentification et la base de données. Mise à jour du README et ajout des fichiers de configuration Firebase
