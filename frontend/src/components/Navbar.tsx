@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
-import { Menu, X, Bell } from 'lucide-react';
+import { Menu, X, Bell, LayoutDashboard, User, MessageSquare, LogOut } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Badge } from '@/components/ui/badge';
@@ -118,6 +118,16 @@ export default function Navbar() {
   // Déterminer si un lien est actif
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const getDashboardLink = (role: string) => {
+    switch (role) {
+      case 'creator':
+      case 'influencer':
+        return '/creator-dashboard';
+      default:
+        return '';
+    }
   };
 
   return (
@@ -262,14 +272,29 @@ export default function Navbar() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    {getDashboardLink(user.role) && (
+                      <DropdownMenuItem asChild>
+                        <Link to={getDashboardLink(user.role)} className="cursor-pointer">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          Tableau de bord
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer">Profil</Link>
+                      <Link to="/profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        Profil
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/messages" className="cursor-pointer">Messages</Link>
+                      <Link to="/messages" className="cursor-pointer">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Messages
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500">
+                      <LogOut className="mr-2 h-4 w-4" />
                       Déconnexion
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -369,14 +394,29 @@ export default function Navbar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {getDashboardLink(user.role) && (
+                    <DropdownMenuItem asChild>
+                      <Link to={getDashboardLink(user.role)} className="cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Tableau de bord
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer">Profil</Link>
+                    <Link to="/profile" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Profil
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/messages" className="cursor-pointer">Messages</Link>
+                    <Link to="/messages" className="cursor-pointer">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Messages
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500">
+                    <LogOut className="mr-2 h-4 w-4" />
                     Déconnexion
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -466,13 +506,15 @@ export default function Navbar() {
             {user ? (
               <>
                 <div className="h-[1px] bg-purple-500/20 my-2"></div>
-                <Link
-                  to="/dashboard"
-                  className="text-sm text-gray-300 hover:text-purple-400 transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Tableau de bord
-                </Link>
+                {getDashboardLink(user.role) && (
+                  <Link
+                    to={getDashboardLink(user.role)}
+                    className="text-sm text-gray-300 hover:text-purple-400 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Tableau de bord
+                  </Link>
+                )}
                 <Link
                   to="/profile"
                   className="text-sm text-gray-300 hover:text-purple-400 transition-colors"

@@ -211,7 +211,7 @@ export default function CreatorProfiles() {
               Profils de Créateurs
             </h1>
             <p className="text-gray-400 mt-2">
-              Découvrez nos créateurs et leurs contenus. Proposez-leur des collaborations pour vos projets.
+              Découvrez nos créateurs et leurs contenus pour vos projets de collaboration.
             </p>
           </div>
           <div className="flex gap-4 items-center">
@@ -276,13 +276,12 @@ export default function CreatorProfiles() {
                 {filteredCreators.map((creator) => (
                   <Card 
                     key={creator.uid} 
-                    className="bg-purple-900/10 border-purple-500/20 hover:border-purple-500/40 transition-all"
-                    style={{ height: '320px', display: 'flex', flexDirection: 'column' }}
+                    className="bg-purple-900/10 border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col"
                   >
-                    {/* En-tête fixe avec photo et nom */}
-                    <div className="p-4 pb-2">
+                    {/* En-tête avec photo et nom */}
+                    <div className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full overflow-hidden bg-purple-950 flex-shrink-0">
+                        <div className="h-12 w-12 rounded-full overflow-hidden bg-purple-950 flex-shrink-0">
                           {creator.photoURL ? (
                             <img 
                               src={creator.photoURL} 
@@ -291,7 +290,7 @@ export default function CreatorProfiles() {
                             />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center bg-purple-800">
-                              <User className="h-5 w-5 text-white" />
+                              <User className="h-6 w-6 text-white" />
                             </div>
                           )}
                         </div>
@@ -300,78 +299,49 @@ export default function CreatorProfiles() {
                           <div className="flex items-center gap-1 text-sm text-gray-400">
                             <Star className="h-3 w-3 text-yellow-500" />
                             <span>{creator.rating ? creator.rating.toFixed(1) : '0.0'}</span>
+                            <span className="mx-1">•</span>
+                            <Video className="h-3 w-3 text-gray-400" />
+                            <span>{creator.projectCount || 0} vidéos</span>
                           </div>
                         </div>
                       </div>
                     </div>
                     
-                    {/* Contenu avec hauteur fixe */}
-                    <div className="p-4 pt-0 flex flex-col" style={{ height: '170px' }}>
+                    {/* Contenu */}
+                    <div className="p-4 pt-0 flex-grow">
                       {/* Compétences */}
-                      <div className="flex gap-2 mt-2 flex-wrap">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {creator.skills && creator.skills.slice(0, 3).map((skill, index) => (
-                          <span key={index} className="text-xs bg-purple-950/50 text-purple-300 px-2 py-0.5 rounded-full">
+                          <span 
+                            key={index} 
+                            className="bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full text-xs text-purple-300"
+                          >
                             {skill}
                           </span>
                         ))}
                         {creator.skills && creator.skills.length > 3 && (
-                          <span className="text-xs bg-purple-950/50 text-purple-300 px-2 py-0.5 rounded-full">
-                            +{creator.skills.length - 3}
-                          </span>
+                          <span className="text-xs text-gray-500">+{creator.skills.length - 3} autres</span>
                         )}
                       </div>
                       
-                      {/* Description avec hauteur maximum */}
-                      <div className="flex-grow overflow-hidden mt-3">
-                        <p className="text-sm text-gray-400 overflow-hidden" style={{ 
-                          display: '-webkit-box', 
-                          WebkitLineClamp: 3, 
-                          WebkitBoxOrient: 'vertical',
-                          maxHeight: '60px'
-                        }}>
-                          {creator.description || "Aucune description disponible"}
-                        </p>
-                      </div>
-                      
-                      {/* Réseaux sociaux */}
-                      <div className="flex gap-2 mt-auto pb-2">
-                        {creator.youtube && (
-                          <div className="p-1.5 bg-red-600/40 text-red-400 rounded-md hover:bg-red-600/60 hover:scale-110 transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.01 2.01 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.01 2.01 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31 31 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.01 2.01 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A100 100 0 0 1 7.858 2zM6.4 5.209v4.818l4.157-2.408z"/>
-                            </svg>
-                          </div>
-                        )}
-                        {creator.twitch && (
-                          <div className="p-1.5 bg-purple-600/40 text-purple-400 rounded-md hover:bg-purple-600/60 hover:scale-110 transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M3.857 0 1 2.857v10.286h3.429V16l2.857-2.857H9.57L14.714 8V0zm9.143 7.429-2.286 2.286H7.429l-2 2v-2H3.143V1.143h9.857z"/>
-                              <path d="M11.857 3.143h-1.143V6.57h1.143zm-3.143 0H7.571V6.57h1.143z"/>
-                            </svg>
-                          </div>
-                        )}
-                        {creator.instagram && (
-                          <div className="p-1.5 bg-gradient-to-br from-pink-500/40 to-yellow-500/40 text-pink-400 rounded-md hover:from-pink-500/60 hover:to-yellow-500/60 hover:scale-110 transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm.003 7.075a.925.925 0 1 1 0 1.85.925.925 0 0 1 0-1.85m0 1.3a.375.375 0 1 0 0-.75.375.375 0 0 0 0 .75M8 3.669a4.33 4.33 0 1 1 0 8.661 4.33 4.33 0 0 1 0-8.661m0 7.15a2.821 2.821 0 1 0 0-5.642 2.821 2.821 0 0 0 0 5.642"/>
-                            </svg>
-                          </div>
-                        )}
-                      </div>
+                      {/* Description */}
+                      <p className="text-sm text-gray-400 line-clamp-3">
+                        {creator.description}
+                      </p>
                     </div>
                     
-                    {/* Boutons toujours alignés en bas */}
-                    <div className="mt-auto p-4 pt-2 border-t-0">
+                    {/* Actions */}
+                    <div className="mt-auto p-4 pt-3 border-t border-purple-500/10">
                       <div className="flex gap-2">
                         <Button 
-                          variant="ghost" 
-                          className="flex-1 bg-purple-900/20 hover:bg-purple-900/40"
+                          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                           onClick={() => handleViewProfile(creator.uid)}
                         >
                           Voir profil
                         </Button>
                         <Button 
-                          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          variant="outline" 
+                          className="border-purple-500/20 text-purple-300 hover:bg-purple-400/10"
                           onClick={() => handleContact(creator.uid, creator.displayName)}
                         >
                           Contacter
@@ -384,24 +354,27 @@ export default function CreatorProfiles() {
             )}
             
             {/* Pagination */}
-            <div className="mt-8 flex justify-center">
-              {isLoadingMore ? (
-                <Button disabled className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Chargement...
-                </Button>
-              ) : hasMore ? (
-                <Button 
-                  onClick={loadMoreCreators}
-                  className="flex items-center gap-2 bg-purple-800/50 hover:bg-purple-800/70"
-                >
-                  <>Voir plus de créateurs</>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : creators.length > 0 && (
-                <p className="text-gray-400 text-sm">Tous les créateurs ont été chargés</p>
-              )}
-            </div>
+            {!isLoading && filteredCreators.length > 0 && (
+              <div className="flex justify-center mt-8 gap-4">
+                {hasMore && (
+                  <Button
+                    onClick={loadMoreCreators}
+                    variant="outline"
+                    className="border-purple-500/30 text-purple-300"
+                    disabled={isLoadingMore}
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Chargement...
+                      </>
+                    ) : (
+                      <>Afficher plus de créateurs</>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

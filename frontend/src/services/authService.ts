@@ -219,12 +219,26 @@ export const authService = {
   },
 
   // Mise à jour du rôle de l'utilisateur
-  async updateUserRole(userId: string, role: 'expert' | 'creator' | 'influencer') {
+  async updateUserRole(userId: string, role: 'expert' | 'creator' | 'influencer'): Promise<User> {
     try {
-      await updateDoc(doc(db, 'users', userId), {
+      const userRef = doc(db, 'users', userId);
+      const updateData = {
         role,
         updatedAt: new Date().toISOString()
-      });
+      };
+      
+      await updateDoc(userRef, updateData);
+      
+      // Récupérer les données mises à jour
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        throw new Error('Utilisateur non trouvé après la mise à jour');
+      }
+      
+      const userData = userSnap.data() as User;
+      console.log('Données utilisateur après mise à jour du rôle:', userData);
+      
+      return userData;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du rôle:', error);
       throw error;

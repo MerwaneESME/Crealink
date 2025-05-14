@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserCircle2, LogOut, Settings, MessageSquare, User, Bell, LayoutDashboard, Briefcase } from 'lucide-react';
+import { UserCircle2, LogOut, Settings, MessageSquare, User, Bell, LayoutDashboard } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,10 +54,26 @@ const UserProfileDropdown = () => {
         return 'Créateur';
       case 'expert':
         return 'Expert';
+      case 'influencer':
+        return 'Influenceur';
       default:
         return 'Utilisateur';
     }
   };
+
+  const getDashboardLink = (role: string) => {
+    switch (role) {
+      case 'creator':
+      case 'influencer':
+        return '/creator-dashboard';
+      default:
+        return '';
+    }
+  };
+
+  // Ajouter un log pour déboguer
+  console.log('User role:', user.role);
+  console.log('Should show dashboard:', user.role === 'creator' || user.role === 'expert' || user.role === 'influencer');
 
   return (
     <div className="flex items-center gap-2">
@@ -106,54 +122,38 @@ const UserProfileDropdown = () => {
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64" align="end" forceMount>
+        <DropdownMenuContent align="end" className="w-56 bg-purple-900/10 border-purple-500/20">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.name}</p>
-              <p className="text-xs leading-none text-muted-foreground">
-                {user.email}
-              </p>
-              <Badge className="mt-1 w-fit" variant="outline">
-                {getRoleName(user.role)}
-              </Badge>
+              <p className="text-sm font-medium">{user.displayName || user.name}</p>
+              <p className="text-xs text-gray-400">{user.email}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuGroup>
+          {getDashboardLink(user.role) && (
             <DropdownMenuItem asChild>
-              <Link to={user.role === 'expert' ? '/portfolio' : '/creator-dashboard'} className="cursor-pointer flex w-full">
-                {user.role === 'expert' ? <Briefcase className="mr-2 h-4 w-4" /> : <LayoutDashboard className="mr-2 h-4 w-4" />}
-                <span>{user.role === 'expert' ? 'Portfolio' : 'Tableau de bord'}</span>
+              <Link to={getDashboardLink(user.role)} className="cursor-pointer hover:bg-purple-900/30">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Tableau de bord
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/profile" className="cursor-pointer flex w-full">
-                <User className="mr-2 h-4 w-4" />
-                <span>Mon profil</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/messages" className="cursor-pointer flex w-full">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                <span>Messages</span>
-                {unreadMessages > 0 && (
-                  <Badge className="ml-auto">
-                    {unreadMessages}
-                  </Badge>
-                )}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings" className="cursor-pointer flex w-full">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Paramètres</span>
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+          )}
+          <DropdownMenuItem asChild>
+            <Link to="/profile" className="cursor-pointer hover:bg-purple-900/30">
+              <User className="mr-2 h-4 w-4" />
+              Profil
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/messages" className="cursor-pointer hover:bg-purple-900/30">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Messages
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 hover:bg-red-900/20">
             <LogOut className="mr-2 h-4 w-4" />
-            <span>Déconnexion</span>
+            Déconnexion
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

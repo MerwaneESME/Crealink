@@ -91,13 +91,7 @@ const DashboardRedirect = () => {
     return <Navigate to="/login" />;
   }
   
-  if (user.role === 'expert') {
-    return <Navigate to="/portfolio" />;
-  } else if (user.role === 'creator' || user.role === 'influencer') {
-    return <Navigate to="/creator-dashboard" />;
-  }
-  
-  return <Navigate to="/" />;
+  return <Navigate to="/jobs" />;
 };
 
 function AppLayout() {

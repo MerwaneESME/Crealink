@@ -8,18 +8,39 @@ service cloud.firestore {
       return userDoc != null ? userDoc.data.role : null;
     }
     
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est membre de la conversation
+    function isConversationMember(conversationId) {
+      let conversation = get(/databases/$(database)/documents/conversations/$(conversationId));
+      return isAuthenticated() && request.auth.uid in conversation.data.participants;
+    }
+    
     // Collection users
     match /users/{userId} {
-      // Permettre la lecture du profil de l'utilisateur connecté et des profils publics
+      // Permettre la lecture du profil à tout utilisateur authentifié
       allow read: if request.auth != null;
       
-      // Permettre la création et la mise à jour uniquement de son propre profil
-      allow create, update: if request.auth != null && 
-                           request.auth.uid == userId;
+      // Permettre la création lors de l'inscription
+      allow create: if request.auth != null && 
+                   request.auth.uid == userId;
       
-      // Permettre la suppression uniquement de son propre profil
+      // Permettre la mise à jour de son propre profil
+      allow update: if request.auth != null && 
+                   request.auth.uid == userId;
+      
+      // Permettre la suppression de son propre profil
       allow delete: if request.auth != null && 
-                    request.auth.uid == userId;
+                   request.auth.uid == userId;
+    }
+
+    // Collection userSettings (pour les paramètres utilisateur)
+    match /userSettings/{userId} {
+      allow read, write: if request.auth != null && 
+                        request.auth.uid == userId;
     }
     
     // Collection portfolio pour les créateurs
@@ -29,11 +50,11 @@ service cloud.firestore {
       
       // Seul le créateur peut ajouter du contenu à son portfolio
       allow create: if request.auth != null && 
-                    request.resource.data.creatorId == request.auth.uid;
+                   request.resource.data.creatorId == request.auth.uid;
       
       // Seul le créateur peut modifier ou supprimer son contenu
       allow update, delete: if request.auth != null && 
-                            resource.data.creatorId == request.auth.uid;
+                           resource.data.creatorId == request.auth.uid;
     }
     
     // Collection job_proposals pour les notifications
@@ -45,17 +66,17 @@ service cloud.firestore {
       
       // Permettre la création pour les créateurs
       allow create: if request.auth != null && 
-                    getUserRole(request.auth.uid) == 'creator' &&
-                    request.resource.data.creatorId == request.auth.uid;
+                   getUserRole(request.auth.uid) == 'creator' &&
+                   request.resource.data.creatorId == request.auth.uid;
       
       // Permettre la mise à jour pour l'expert ou le créateur concerné
       allow update: if request.auth != null && 
-                    (resource.data.expertId == request.auth.uid || 
-                     resource.data.creatorId == request.auth.uid);
+                   (resource.data.expertId == request.auth.uid || 
+                    resource.data.creatorId == request.auth.uid);
       
       // Permettre la suppression uniquement au créateur
       allow delete: if request.auth != null && 
-                    resource.data.creatorId == request.auth.uid;
+                   resource.data.creatorId == request.auth.uid;
     }
     
     // Collection projects
@@ -65,8 +86,8 @@ service cloud.firestore {
       
       // Permettre la création de projets pour les experts
       allow create: if request.auth != null && 
-                    getUserRole(request.auth.uid) == 'expert' && 
-                    request.resource.data.expertId == request.auth.uid;
+                   getUserRole(request.auth.uid) == 'expert' && 
+                   request.resource.data.expertId == request.auth.uid;
       
       // Permettre la mise à jour et la suppression uniquement par le propriétaire
       allow update, delete: if request.auth != null && 
@@ -80,11 +101,11 @@ service cloud.firestore {
       
       // Permettre la création et la mise à jour uniquement par le créateur propriétaire
       allow create, update: if request.auth != null && 
-                            request.resource.data.creatorId == request.auth.uid;
+                           request.resource.data.creatorId == request.auth.uid;
       
       // Permettre la suppression uniquement par le créateur propriétaire
       allow delete: if request.auth != null && 
-                    resource.data.creatorId == request.auth.uid;
+                   resource.data.creatorId == request.auth.uid;
     }
     
     // Collection jobs
@@ -94,16 +115,43 @@ service cloud.firestore {
       
       // Permettre la création d'offres pour les créateurs et les influenceurs
       allow create: if request.auth != null && 
-                    (getUserRole(request.auth.uid) == 'creator' || 
-                     getUserRole(request.auth.uid) == 'influencer');
+                   (getUserRole(request.auth.uid) == 'creator' || 
+                    getUserRole(request.auth.uid) == 'influencer');
       
       // Permettre la mise à jour et la suppression uniquement par le créateur de l'offre
       allow update, delete: if request.auth != null && 
-                            resource.data.creatorId == request.auth.uid;
+                           resource.data.creatorId == request.auth.uid;
     }
     
-    // Reste des règles inchangées
-    // ...
+    // Règles pour les conversations
+    match /conversations/{conversationId} {
+      // Autoriser la lecture si l'utilisateur est membre de la conversation
+      allow read: if isAuthenticated() && 
+                 (resource == null || request.auth.uid in resource.data.participants);
+      
+      // Autoriser la création si l'utilisateur est l'un des participants
+      allow create: if isAuthenticated() && 
+                   request.resource.data.participants.hasAll([request.auth.uid]) && 
+                   request.resource.data.participants.size() == 2;
+      
+      // Autoriser la mise à jour si l'utilisateur est membre de la conversation
+      allow update: if isAuthenticated() && 
+                   request.auth.uid in resource.data.participants;
+
+      // Règles pour les messages dans une conversation
+      match /messages/{messageId} {
+        // Autoriser la lecture si l'utilisateur est membre de la conversation parente
+        allow read: if isConversationMember(conversationId);
+        
+        // Autoriser la création si l'utilisateur est membre et est l'expéditeur
+        allow create: if isConversationMember(conversationId) && 
+                     request.resource.data.senderId == request.auth.uid;
+        
+        // Autoriser la mise à jour pour marquer comme lu si l'utilisateur est membre
+        allow update: if isConversationMember(conversationId) && 
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      }
+    }
   }
 }
 

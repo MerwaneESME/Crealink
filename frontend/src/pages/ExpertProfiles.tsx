@@ -318,7 +318,7 @@ export default function ExpertProfiles() {
               Profils d'Experts
             </h1>
             <p className="text-gray-400 mt-2">
-              Découvrez nos experts et leurs portfolios. Proposez-leur des collaborations pour vos projets.
+              Découvrez nos experts et leurs portfolios pour vos projets de collaboration.
             </p>
           </div>
           <div className="flex gap-4 items-center">
@@ -383,13 +383,12 @@ export default function ExpertProfiles() {
                 {filteredExperts.map((expert) => (
                   <Card 
                     key={expert.uid} 
-                    className="bg-purple-900/10 border-purple-500/20 hover:border-purple-500/40 transition-all"
-                    style={{ height: '320px', display: 'flex', flexDirection: 'column' }}
+                    className="bg-purple-900/10 border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col"
                   >
-                    {/* En-tête fixe avec photo et nom */}
-                    <div className="p-4 pb-2">
+                    {/* En-tête avec photo et nom */}
+                    <div className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full overflow-hidden bg-purple-950 flex-shrink-0">
+                        <div className="h-12 w-12 rounded-full overflow-hidden bg-purple-950 flex-shrink-0">
                           {expert.photoURL ? (
                             <img 
                               src={expert.photoURL} 
@@ -398,7 +397,7 @@ export default function ExpertProfiles() {
                             />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center bg-purple-800">
-                              <User className="h-5 w-5 text-white" />
+                              <User className="h-6 w-6 text-white" />
                             </div>
                           )}
                         </div>
@@ -415,10 +414,10 @@ export default function ExpertProfiles() {
                       </div>
                     </div>
                     
-                    {/* Contenu avec hauteur fixe */}
-                    <div className="p-4 pt-0 flex flex-col" style={{ height: '170px' }}>
+                    {/* Contenu */}
+                    <div className="p-4 pt-0 flex-grow">
                       {/* Compétences */}
-                      <div className="flex gap-2 mt-2 flex-wrap">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {expert.skills && expert.skills.slice(0, 3).map((skill, index) => (
                           <span 
                             key={index} 
@@ -432,29 +431,29 @@ export default function ExpertProfiles() {
                         )}
                       </div>
                       
-                      {/* Bio avec texte tronqué */}
-                      <div className="my-2 flex-grow overflow-hidden">
-                        <p className="text-sm text-gray-400 line-clamp-4 text-ellipsis overflow-hidden">
-                          {expert.bio}
-                        </p>
-                      </div>
+                      {/* Description */}
+                      <p className="text-sm text-gray-400 line-clamp-3">
+                        {expert.bio}
+                      </p>
                     </div>
                     
-                    {/* Pied de carte avec actions */}
-                    <div className="mt-auto border-t border-purple-500/10 p-3 flex gap-2">
-                      <Button 
-                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                        onClick={() => handleViewProfile(expert.uid)}
-                      >
-                        Voir profil
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="border-purple-500/20 text-purple-300 hover:bg-purple-400/10"
-                        onClick={() => handleContact(expert.uid, expert.displayName)}
-                      >
-                        Contacter
-                      </Button>
+                    {/* Actions */}
+                    <div className="mt-auto p-4 pt-3 border-t border-purple-500/10">
+                      <div className="flex gap-2">
+                        <Button 
+                          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          onClick={() => handleViewProfile(expert.uid)}
+                        >
+                          Voir profil
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="border-purple-500/20 text-purple-300 hover:bg-purple-400/10"
+                          onClick={() => handleContact(expert.uid, expert.displayName)}
+                        >
+                          Contacter
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}

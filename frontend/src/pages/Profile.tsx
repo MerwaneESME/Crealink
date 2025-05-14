@@ -73,13 +73,13 @@ const Profile: React.FC = () => {
             fileInputRef={fileInputRef}
             onOpenSettings={() => setSettingsOpen(true)} 
           />
-        ) : (
+              ) : (
           <ExpertProfile 
             user={user} 
             fileInputRef={fileInputRef} 
             onOpenSettings={() => setSettingsOpen(true)}
           />
-        )}
+              )}
         
         {/* Modal des paramètres */}
         <ProfileSettings 
@@ -89,14 +89,14 @@ const Profile: React.FC = () => {
         />
         
         {/* Input caché pour gérer l'upload de photo */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          className="hidden"
-          accept="image/*"
-          onChange={handlePhotoChange}
-          aria-label="Changer la photo de profil"
-        />
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            aria-label="Changer la photo de profil"
+          />
       </div>
     </div>
   );

@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Search, X, ChevronDown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 interface Job {
   id: string;
@@ -23,6 +26,7 @@ interface Job {
   creatorId: string;
   creatorName: string;
   status: 'open' | 'closed';
+  metier?: string;
 }
 
 const CreatorDashboard: React.FC = () => {
@@ -35,6 +39,9 @@ const CreatorDashboard: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'closed'>('all');
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -45,7 +52,6 @@ const CreatorDashboard: React.FC = () => {
   // Détecter si l'utilisateur est arrivé avec des paramètres pour proposer une offre à un expert
   const isSelectingJobForExpert = !!expertId && !!expertName;
 
-  // Ajouter des logs pour le débogage
   useEffect(() => {
     if (isSelectingJobForExpert) {
       console.log('Mode sélection d\'offre pour expert:', { expertId, expertName });
@@ -69,7 +75,6 @@ const CreatorDashboard: React.FC = () => {
     if (!user || !expertId) return;
     
     try {
-      // Afficher une notification de chargement
       toast({
         title: 'Proposition en cours...',
         description: 'Veuillez patienter pendant que nous traitons votre demande',
@@ -77,7 +82,6 @@ const CreatorDashboard: React.FC = () => {
       
       console.log('Proposition d\'offre pour l\'expert:', expertId, 'job:', jobId);
       
-      // Créer une proposition dans Firestore
       const proposalData = {
         jobId,
         expertId,
@@ -89,57 +93,22 @@ const CreatorDashboard: React.FC = () => {
         title: jobs.find(job => job.id === jobId)?.title || "Sans titre"
       };
       
-      // Utiliser un ID composé pour éviter les doublons
       const proposalId = `${jobId}_${expertId}`;
       
       try {
-        console.log('Tentative d\'enregistrement de la proposition avec setDoc...');
-        
-        // Essayer d'enregistrer la proposition, mais avec une gestion plus robuste des erreurs
-        // Utiliser une promesse avec timeout pour éviter que l'opération ne soit bloquée indéfiniment
-        const saveProposalPromise = new Promise<void>((resolve, reject) => {
-          const timeoutId = setTimeout(() => {
-            reject(new Error('Délai d\'attente dépassé pour l\'enregistrement de la proposition'));
-          }, 5000); // Timeout de 5 secondes
-          
-          setDoc(doc(db, 'job_proposals', proposalId), proposalData)
-            .then(() => {
-              clearTimeout(timeoutId);
-              resolve();
-            })
-            .catch((error) => {
-              clearTimeout(timeoutId);
-              reject(error);
-            });
-        });
-        
-        await saveProposalPromise;
-        console.log('Proposition enregistrée avec succès');
+        await setDoc(doc(db, 'job_proposals', proposalId), proposalData);
         
         toast({
-          title: 'Offre proposée',
-          description: `Votre offre a été proposée à ${expertName}`,
+          title: 'Proposition envoyée',
+          description: 'Votre offre a été proposée avec succès',
         });
         
-        // Rediriger vers la page des experts
         navigate('/profiles');
       } catch (innerError: any) {
-        console.error('Erreur Firestore détaillée:', innerError);
+        console.error('Erreur lors de la sauvegarde de la proposition:', innerError);
         
-        // Si l'erreur est liée à un blocage ou à un délai dépassé, utiliser l'approche de contournement
-        if (innerError.name === 'FirebaseError' || 
-            innerError.message?.includes('blocked') || 
-            innerError.message?.includes('timeout') ||
-            innerError.message?.includes('Délai d\'attente')) {
-          console.log('Contournement du blocage en utilisant le stockage local...');
-          
-          // Simulation d'un succès pour contourner l'erreur de blocage
-          toast({
-            title: 'Offre proposée',
-            description: `Votre offre a été envoyée à ${expertName}`,
-          });
-          
-          // Mémoriser la proposition localement dans sessionStorage
+        if (innerError.code === 'unavailable') {
+          console.log('Tentative de sauvegarde locale...');
           try {
             const localProposals = JSON.parse(sessionStorage.getItem('pendingProposals') || '[]');
             localProposals.push({
@@ -153,14 +122,12 @@ const CreatorDashboard: React.FC = () => {
             sessionStorage.setItem('pendingProposals', JSON.stringify(localProposals));
             console.log('Proposition sauvegardée localement:', proposalId);
             
-            // Planifier une tentative de synchronisation différée
             setTimeout(() => {
               console.log('Tentative de synchronisation de la proposition en arrière-plan...');
               try {
                 setDoc(doc(db, 'job_proposals', proposalId), proposalData)
                   .then(() => {
                     console.log('Synchronisation réussie en arrière-plan');
-                    // Mettre à jour le stockage local
                     const storedProposals = JSON.parse(sessionStorage.getItem('pendingProposals') || '[]');
                     const updatedProposals = storedProposals.filter((p: any) => p.id !== proposalId);
                     sessionStorage.setItem('pendingProposals', JSON.stringify(updatedProposals));
@@ -171,15 +138,14 @@ const CreatorDashboard: React.FC = () => {
               } catch (syncError) {
                 console.error('Erreur lors de la tentative de synchronisation:', syncError);
               }
-            }, 30000); // Réessayer après 30 secondes
+            }, 30000);
+            
+            navigate('/profiles');
           } catch (storageError) {
             console.error('Erreur de stockage local:', storageError);
+            throw innerError;
           }
-          
-          // Rediriger vers la page des experts
-          navigate('/profiles');
         } else {
-          // Pour les autres types d'erreurs, afficher un message standard
           throw innerError;
         }
       }
@@ -198,22 +164,16 @@ const CreatorDashboard: React.FC = () => {
     
     setIsLoading(true);
     try {
-      console.log('Récupération des offres pour l\'utilisateur:', user.uid, 'avec rôle:', user.role);
+      console.log('Récupération des offres pour l\'utilisateur:', user.uid);
       
-      // Essayer de récupérer les offres même si c'est un influenceur
-      let jobsQuery;
-      
-      // Tenter d'abord avec le rôle actuel
-      jobsQuery = query(
+      let jobsQuery = query(
         collection(db, 'jobs'),
         where('creatorId', '==', user.uid)
       );
       
       let querySnapshot = await getDocs(jobsQuery);
-      console.log('Nombre d\'offres trouvées (1ère tentative):', querySnapshot.docs.length);
+      console.log('Nombre d\'offres trouvées:', querySnapshot.docs.length);
       
-      // Si aucune offre n'est trouvée et que nous sommes dans le mode de sélection, 
-      // créer une offre d'exemple
       if (querySnapshot.docs.length === 0 && isSelectingJobForExpert) {
         console.log('Aucune offre trouvée. Création d\'une offre d\'exemple...');
         
@@ -221,24 +181,23 @@ const CreatorDashboard: React.FC = () => {
           title: "Nouvelle collaboration",
           description: `Je souhaite collaborer avec vous sur un projet. Prenons contact pour en discuter plus en détail.`,
           budget: "À discuter",
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Dans 30 jours
+          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           creatorId: user.uid,
           creatorName: user.name || user.displayName || "Utilisateur",
           createdAt: new Date().toISOString(),
           status: 'open'
         };
         
-        // Ajouter l'offre d'exemple à Firestore
         const docRef = await addDoc(collection(db, 'jobs'), exampleJobData);
         console.log('Offre d\'exemple créée avec ID:', docRef.id);
         
-        // Ajouter l'offre à la liste
         const jobsData = [{
           id: docRef.id,
           ...exampleJobData
         }] as Job[];
         
         setJobs(jobsData);
+        setFilteredJobs(jobsData);
         setIsLoading(false);
         return;
       }
@@ -255,6 +214,7 @@ const CreatorDashboard: React.FC = () => {
       });
       
       setJobs(sortedJobs);
+      setFilteredJobs(sortedJobs);
     } catch (error: any) {
       console.error('Erreur détaillée:', error);
       toast({
@@ -266,6 +226,26 @@ const CreatorDashboard: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    let filtered = jobs;
+    
+    // Filtre par terme de recherche
+    if (searchTerm) {
+      const normalizedSearchTerm = searchTerm.toLowerCase();
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(normalizedSearchTerm) || 
+        job.description.toLowerCase().includes(normalizedSearchTerm)
+      );
+    }
+    
+    // Filtre par statut
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(job => job.status === filterStatus);
+    }
+    
+    setFilteredJobs(filtered);
+  }, [searchTerm, filterStatus, jobs]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -284,7 +264,7 @@ const CreatorDashboard: React.FC = () => {
       const jobData = {
         ...formData,
         creatorId: user.uid,
-        creatorName: user.name,
+        creatorName: user.name || user.displayName || 'Utilisateur',
         createdAt: new Date().toISOString(),
         status: 'open'
       };
@@ -296,7 +276,6 @@ const CreatorDashboard: React.FC = () => {
         description: 'Votre annonce a été publiée avec succès',
       });
       
-      // Réinitialiser le formulaire
       setFormData({
         title: '',
         description: '',
@@ -304,7 +283,6 @@ const CreatorDashboard: React.FC = () => {
         deadline: '',
       });
       
-      // Rafraîchir la liste des annonces
       fetchJobs();
     } catch (error: any) {
       toast({
@@ -328,7 +306,6 @@ const CreatorDashboard: React.FC = () => {
         description: 'L\'annonce a été supprimée avec succès',
       });
       
-      // Rafraîchir la liste des annonces
       fetchJobs();
     } catch (error: any) {
       toast({
@@ -351,7 +328,6 @@ const CreatorDashboard: React.FC = () => {
         description: `L'annonce est maintenant ${newStatus === 'open' ? 'ouverte' : 'fermée'}`,
       });
       
-      // Rafraîchir la liste des annonces
       fetchJobs();
     } catch (error: any) {
       toast({
@@ -413,17 +389,67 @@ const CreatorDashboard: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        <div className="bg-purple-900/10 border border-purple-500/20 rounded-lg p-4 mb-8 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Rechercher une offre..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-black/50 border-purple-500/20 focus:border-purple-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant={filterStatus === 'all' ? 'default' : 'outline'}
+                onClick={() => setFilterStatus('all')}
+                className={`${filterStatus === 'all' ? 'bg-purple-900/40 text-white' : 'bg-black/50 border-purple-500/20'} hover:bg-purple-900/30`}
+              >
+                Toutes
+              </Button>
+              <Button 
+                variant={filterStatus === 'open' ? 'default' : 'outline'}
+                onClick={() => setFilterStatus('open')}
+                className={`${filterStatus === 'open' ? 'bg-purple-900/40 text-white' : 'bg-black/50 border-purple-500/20'} hover:bg-purple-900/30`}
+              >
+                Ouvertes
+              </Button>
+              <Button 
+                variant={filterStatus === 'closed' ? 'default' : 'outline'}
+                onClick={() => setFilterStatus('closed')}
+                className={`${filterStatus === 'closed' ? 'bg-purple-900/40 text-white' : 'bg-black/50 border-purple-500/20'} hover:bg-purple-900/30`}
+              >
+                Fermées
+              </Button>
+            </div>
+          </div>
+        </div>
         
         <Tabs defaultValue={isSelectingJobForExpert ? "my-jobs" : "publish"} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="publish">Publier une annonce</TabsTrigger>
-            <TabsTrigger value="my-jobs" className={isSelectingJobForExpert ? "animate-pulse bg-purple-900/30" : ""}>
+          <TabsList className="grid w-full grid-cols-2 bg-purple-900/10 border border-purple-500/20 p-1">
+            <TabsTrigger 
+              value="publish" 
+              className="data-[state=active]:bg-purple-900/40 data-[state=active]:text-white"
+            >
+              Publier une annonce
+            </TabsTrigger>
+            <TabsTrigger 
+              value="my-jobs" 
+              className={`data-[state=active]:bg-purple-900/40 data-[state=active]:text-white ${
+                isSelectingJobForExpert ? "animate-pulse bg-purple-900/30" : ""
+              }`}
+            >
               Mes annonces {isSelectingJobForExpert && <span className="ml-2 text-purple-400">⟵ Choisir ici</span>}
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="publish">
-            <Card className="bg-black/50 border-purple-500/20">
+            <Card className="bg-purple-900/10 border-purple-500/20">
               <CardHeader>
                 <CardTitle>Publier une annonce</CardTitle>
                 <CardDescription>
@@ -442,6 +468,7 @@ const CreatorDashboard: React.FC = () => {
                       placeholder="Ex: Recherche expert en montage vidéo"
                       required
                       disabled={isSubmitting}
+                      className="bg-black/50 border-purple-500/20 focus:border-purple-500"
                     />
                   </div>
                   
@@ -454,7 +481,7 @@ const CreatorDashboard: React.FC = () => {
                       onChange={handleChange}
                       placeholder="Décrivez votre projet et vos besoins"
                       required
-                      className="min-h-[150px]"
+                      className="min-h-[150px] bg-black/50 border-purple-500/20 focus:border-purple-500"
                       disabled={isSubmitting}
                     />
                   </div>
@@ -471,6 +498,7 @@ const CreatorDashboard: React.FC = () => {
                         placeholder="Ex: 500"
                         required
                         disabled={isSubmitting}
+                        className="bg-black/50 border-purple-500/20 focus:border-purple-500"
                       />
                     </div>
                     
@@ -484,6 +512,7 @@ const CreatorDashboard: React.FC = () => {
                         onChange={handleChange}
                         required
                         disabled={isSubmitting}
+                        className="bg-black/50 border-purple-500/20 focus:border-purple-500"
                       />
                     </div>
                   </div>
@@ -503,103 +532,99 @@ const CreatorDashboard: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="my-jobs">
-            <Card className="bg-black/50 border-purple-500/20">
-              <CardHeader>
-                <CardTitle>Mes annonces</CardTitle>
-                <CardDescription>
-                  {isSelectingJobForExpert 
-                    ? `Sélectionnez une annonce à proposer à ${expertName}` 
-                    : 'Gérez vos annonces publiées'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="text-center py-8">Chargement des annonces...</div>
-                ) : jobs.length === 0 ? (
-                  <div className="text-center py-8">Vous n'avez pas encore publié d'annonces</div>
-                ) : (
-                  <div className="space-y-4">
-                    {jobs.map(job => (
-                      <Card key={job.id} className="bg-black/30 border-purple-500/10">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle className="text-xl">{job.title}</CardTitle>
-                              <CardDescription>
-                                Publiée le {format(new Date(job.createdAt), 'dd MMMM yyyy', { locale: fr })}
-                              </CardDescription>
-                            </div>
-                            <div className="flex space-x-2">
-                              {isSelectingJobForExpert ? (
-                                <Button 
-                                  variant="default" 
-                                  size="sm"
-                                  onClick={() => proposeJobToExpert(job.id)}
-                                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium animate-pulse"
-                                  disabled={job.status !== 'open'}
-                                >
-                                  {job.status === 'open' ? (
-                                    <>
-                                      Proposer
-                                      <span className="ml-1">→</span>
-                                    </>
-                                  ) : 'Fermée'}
-                                </Button>
-                              ) : (
-                                <>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleToggleStatus(job.id, job.status)}
-                                    className={job.status === 'open' ? 'text-green-500 border-green-500/20' : 'text-red-500 border-red-500/20'}
-                                  >
-                                    {job.status === 'open' ? 'Ouverte' : 'Fermée'}
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleDeleteJob(job.id)}
-                                    className="text-red-500 border-red-500/20"
-                                  >
-                                    Supprimer
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <p className="text-sm text-gray-300">{job.description}</p>
-                            <div className="flex justify-between text-sm">
-                              <span>Budget: {job.budget}€</span>
-                              <span>Date limite: {format(new Date(job.deadline), 'dd/MM/yyyy')}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-                
-                {isSelectingJobForExpert && (
-                  <div className="mt-6 flex justify-between">
-                    <Button 
-                      variant="outline"
-                      onClick={() => navigate('/profiles')}
-                    >
-                      Annuler
-                    </Button>
-                    <Button 
-                      onClick={() => navigate('/publish')}
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      Créer une nouvelle offre
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {isLoading ? (
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                <p>Chargement des annonces...</p>
+              </div>
+            ) : filteredJobs.length === 0 ? (
+              <div className="text-center py-16">
+                <Card className="max-w-md mx-auto bg-purple-900/10 border-purple-500/20">
+                  <CardContent className="pt-6 pb-6">
+                    <h3 className="text-xl font-semibold mb-2">Aucune offre disponible</h3>
+                    <p className="text-gray-400 mb-6">
+                      {searchTerm || filterStatus !== 'all'
+                        ? "Aucune offre ne correspond à votre recherche."
+                        : "Vous n'avez pas encore publié d'annonces."}
+                    </p>
+                    {!isSelectingJobForExpert && (
+                      <Button 
+                        onClick={() => {
+                          const publishTab = document.querySelector('[data-state="inactive"][data-value="publish"]') as HTMLElement;
+                          if (publishTab) publishTab.click();
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        Créer une annonce
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredJobs.map(job => (
+                  <Card
+                    key={job.id}
+                    className="bg-purple-900/10 border-purple-500/20 hover:border-purple-500/40 flex flex-col"
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold line-clamp-1">{job.title}</CardTitle>
+                      <CardDescription className="text-gray-400 text-xs">
+                        Publiée le {format(new Date(job.createdAt), 'dd MMMM yyyy', { locale: fr })}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-2 flex-grow">
+                      <p className="text-gray-400 text-sm line-clamp-3 mb-4">{job.description}</p>
+                      <div className="flex justify-between text-sm text-gray-400">
+                        <span>Budget: {job.budget}€</span>
+                        <span>Échéance: {format(new Date(job.deadline), 'dd/MM/yyyy')}</span>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-4 border-t border-purple-500/20 flex justify-between gap-2">
+                      {isSelectingJobForExpert ? (
+                        <Button 
+                          variant="default" 
+                          onClick={() => proposeJobToExpert(job.id)}
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          disabled={job.status !== 'open'}
+                        >
+                          {job.status === 'open' ? (
+                            <>
+                              Proposer
+                              <span className="ml-1">→</span>
+                            </>
+                          ) : 'Fermée'}
+                        </Button>
+                      ) : (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleToggleStatus(job.id, job.status)}
+                            className={`flex-1 ${
+                              job.status === 'open' 
+                                ? 'text-green-500 border-green-500/20' 
+                                : 'text-red-500 border-red-500/20'
+                            }`}
+                          >
+                            {job.status === 'open' ? 'Ouverte' : 'Fermée'}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteJob(job.id)}
+                            className="text-red-500 border-red-500/20"
+                          >
+                            Supprimer
+                          </Button>
+                        </>
+                      )}
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

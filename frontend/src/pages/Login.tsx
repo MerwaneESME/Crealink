@@ -20,7 +20,7 @@ const Login = () => {
   // Rediriger si l'utilisateur est déjà connecté
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate('/jobs');
     }
   }, [user, navigate]);
 
@@ -31,7 +31,7 @@ const Login = () => {
 
     try {
       await login(formData.email, formData.password);
-      navigate('/profile');
+      navigate('/jobs');
     } catch (error: any) {
       setError(error.message || 'Une erreur est survenue lors de la connexion');
     } finally {

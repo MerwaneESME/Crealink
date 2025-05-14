@@ -256,10 +256,10 @@ export default function ExpertPortfolio() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center max-w-md mx-auto py-20">
             <h2 className="text-2xl font-bold text-red-400 mb-2">Erreur</h2>
-            <p className="text-gray-300 mb-4">{error}</p>
-            <Button onClick={() => navigate(-1)}>
-              Retour
-            </Button>
+          <p className="text-gray-300 mb-4">{error}</p>
+          <Button onClick={() => navigate(-1)}>
+            Retour
+          </Button>
           </div>
         </div>
       </div>
@@ -275,12 +275,12 @@ export default function ExpertPortfolio() {
               <h1 className="text-3xl font-bold">
                 Informations
               </h1>
-            </div>
-            
+      </div>
+      
             <div className="flex flex-col items-center mt-8 mb-6">
               <div className="w-32 h-32 rounded-full overflow-hidden mb-4 bg-purple-900/30 border-2 border-purple-500/30">
                 {expertProfile?.photoURL ? (
-                  <img 
+                    <img 
                     src={expertProfile.photoURL} 
                     alt="Photo de profil" 
                     className="w-full h-full object-cover"
@@ -297,7 +297,7 @@ export default function ExpertPortfolio() {
               <div className="flex items-center gap-1 mt-1">
                 <Star className="h-4 w-4 text-yellow-500" />
                 <span className="text-gray-300">0.0</span>
-              </div>
+                  </div>
               <p className="text-sm text-purple-300 mt-1 bg-purple-900/30 px-3 py-1 rounded-full">Expert</p>
               
               <div className="mt-6 flex justify-center gap-3">
@@ -352,7 +352,7 @@ export default function ExpertPortfolio() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect width="4" height="12" x="2" y="9"></rect><circle cx="4" cy="4" r="2"></circle></svg>
                   </a>
                 )}
-              </div>
+                    </div>
             
               <div className="mt-6 space-y-2">
                 <h3 className="text-sm font-medium text-white">Contact</h3>
@@ -463,11 +463,11 @@ export default function ExpertPortfolio() {
                       <div className="pl-8 space-y-2 text-gray-300">
                         <p>Des projets stimulants où je peux apporter ma touche créative ! Que ce soit pour un clip, une série web ou une pub, discutons-en.</p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                </div>
+              </CardContent>
+            </Card>
               </TabsContent>
-              
+          
               <TabsContent value="skills" className="mt-6">
                 <Card className="bg-purple-900/10 border-purple-500/20">
                   <CardHeader>
@@ -529,7 +529,7 @@ export default function ExpertPortfolio() {
                         <ImageIcon className="h-12 w-12 text-gray-600 mx-auto mb-3" />
                         <h3 className="text-lg font-medium text-gray-300">Aucun projet dans le portfolio</h3>
                         <p className="text-gray-400 mt-1">Cet expert n'a pas encore ajouté de projets à son portfolio.</p>
-                      </div>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

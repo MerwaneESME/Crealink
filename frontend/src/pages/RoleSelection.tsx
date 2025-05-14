@@ -16,8 +16,11 @@ const RoleSelection = () => {
     
     try {
       setLoading(true);
-      await authService.updateUserRole(user.uid, role);
+      console.log('Mise à jour du rôle vers:', role);
+      const updatedUser = await authService.updateUserRole(user.uid, role);
+      console.log('Utilisateur mis à jour:', updatedUser);
       await refreshUser();
+      console.log('Utilisateur rafraîchi');
       toast.success('Rôle mis à jour avec succès');
       navigate('/onboarding-form');
     } catch (error) {

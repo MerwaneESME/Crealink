@@ -14,6 +14,10 @@ import { authService } from '@/services/authService';
 export type UserRole = 'admin' | 'creator' | 'expert' | 'pending' | 'influencer';
 
 export interface User {
+  showPhone: boolean;
+  showEmail: boolean;
+  rating: string;
+  useDisplayNameOnly: any;
   uid: string;
   email: string | null;
   name: string;
@@ -83,26 +87,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const userData = userSnap.data();
         console.log("Nouvelles données utilisateur:", userData);
         
-        setUser(prevUser => {
-          if (!prevUser) return null;
-          console.log("Mise à jour de l'état utilisateur avec:", {
-            ...prevUser,
-            ...userData,
-          });
-          return {
-            ...prevUser,
-            ...userData,
-            displayName: userData.displayName || userData.name || prevUser?.displayName,
-            photoURL: userData.photoURL || userData.avatar || prevUser?.photoURL,
-          }
-        });
+        const updatedUser: User = {
+          uid: userData.uid,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role,
+          verified: userData.verified || false,
+          createdAt: userData.createdAt,
+          updatedAt: userData.updatedAt,
+          displayName: userData.displayName || userData.name,
+          photoURL: userData.photoURL || userData.avatar,
+          description: userData.description || userData.bio,
+          bio: userData.bio,
+          phone: userData.phone,
+          youtube: userData.youtube,
+          twitch: userData.twitch,
+          instagram: userData.instagram,
+          publishingFrequency: userData.publishingFrequency,
+          challenges: userData.challenges,
+          previousCollaborations: userData.previousCollaborations,
+          neededServices: userData.neededServices,
+          goals: userData.goals,
+          expertise: userData.expertise,
+          experiences: userData.experiences,
+          skills: userData.skills,
+          education: userData.education,
+          favoriteNetwork: userData.favoriteNetwork,
+          linkedin: userData.linkedin,
+          twitter: userData.twitter,
+          showPhone: userData.showPhone || false,
+          showEmail: userData.showEmail || false,
+          rating: userData.rating || '',
+          useDisplayNameOnly: userData.useDisplayNameOnly
+        };
         
+        console.log("Mise à jour de l'état utilisateur avec:", updatedUser);
+        setUser(updatedUser);
         return true;
       } else {
         console.warn("Document utilisateur non trouvé lors du rafraîchissement");
+        return false;
       }
     } catch (error) {
       console.error('Erreur lors du rafraîchissement des données utilisateur:', error);
+      return false;
     }
   };
 
@@ -149,6 +177,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
               favoriteNetwork: userData.favoriteNetwork,
               linkedin: userData.linkedin,
               twitter: userData.twitter,
+              showPhone: false,
+              showEmail: false,
+              rating: '',
+              useDisplayNameOnly: undefined
             };
             console.log('User with role:', userWithRole);
             setUser(userWithRole);

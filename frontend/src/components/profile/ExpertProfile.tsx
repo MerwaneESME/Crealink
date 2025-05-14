@@ -823,7 +823,7 @@ const ExpertProfile: React.FC<ExpertProfileProps> = ({ user, fileInputRef, onOpe
                                   <Button 
                                     type="button"
                                     variant="outline" 
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() => fileInputRef?.current?.click()}
                                     className="w-full border-dashed border-purple-500/30 bg-black/30 hover:bg-purple-900/20"
                                   >
                                     <Upload className="mr-2 h-4 w-4" />
