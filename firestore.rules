@@ -19,6 +19,11 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in conversation.data.participants;
     }
     
+    // Fonction pour vérifier si l'utilisateur est le propriétaire du document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
     // Collection users
     match /users/{userId} {
       // Permettre la lecture du profil à tout utilisateur authentifié
@@ -151,6 +156,24 @@ service cloud.firestore {
         allow update: if isConversationMember(conversationId) && 
                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       }
+    }
+
+    // Règles pour la collection notifications
+    match /notifications/{notificationId} {
+      // Permettre la lecture des notifications de l'utilisateur
+      allow read: if isAuthenticated();
+      
+      // Permettre la création de notifications avec des données valides
+      allow create: if isAuthenticated();
+      
+      // Permettre la mise à jour uniquement pour marquer comme lu
+      allow update: if isAuthenticated() && 
+                   resource.data.userId == request.auth.uid &&
+                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'updatedAt']);
+      
+      // Permettre la suppression de ses propres notifications
+      allow delete: if isAuthenticated() && 
+                   resource.data.userId == request.auth.uid;
     }
   }
 }

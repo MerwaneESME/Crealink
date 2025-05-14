@@ -9,6 +9,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { authService } from '@/services/authService';
+import { notificationService } from '@/services/notificationService';
 
 // Types d'utilisateur
 export type UserRole = 'admin' | 'creator' | 'expert' | 'pending' | 'influencer';
@@ -202,7 +203,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     register: authService.register,
     login: authService.login,
-    logout: authService.signOut,
+    logout: async () => {
+      try {
+        await signOut(auth);
+        notificationService.resetDisplayedNotifications();
+      } catch (error) {
+        console.error('Erreur lors de la déconnexion:', error);
+        throw error;
+      }
+    },
     updateUserProfile: async (data: any, uid?: string) => {
       const userId = uid || user?.uid;
       if (!userId) {

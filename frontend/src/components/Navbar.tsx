@@ -12,11 +12,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
-import { Menu, X, Bell, LayoutDashboard, User, MessageSquare, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, User, MessageSquare, LogOut } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Badge } from '@/components/ui/badge';
 import NeonLogo from './NeonLogo';
+import { notificationService, Notification } from '@/services/notificationService';
+import { NotificationBell } from './NotificationBell';
 
 interface Notification {
   id: string;
@@ -55,45 +57,33 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Écouter les nouvelles notifications pour les experts
+  // Écouter les notifications
   useEffect(() => {
-    if (!user || user.role !== 'expert') return;
+    if (!user) return;
 
-    // Écouter les propositions d'offres adressées à cet expert
-    const q = query(
-      collection(db, 'job_proposals'),
-      where('expertId', '==', user.uid),
-      where('status', '==', 'pending')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newNotifications = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Notification[];
-      
-      // Tri côté client
-      const sortedNotifications = newNotifications.sort((a, b) => 
-        b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()
-      );
-      
-      setNotifications(sortedNotifications);
-      setNotificationCount(sortedNotifications.length);
-    }, (error) => {
-      console.error("Erreur lors de l'écoute des notifications:", error);
+    const unsubscribe = notificationService.subscribeToNotifications(user.uid, (newNotifications) => {
+      setNotifications(newNotifications);
+      setNotificationCount(newNotifications.length);
     });
 
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [user]);
 
   const handleLogout = async () => {
     try {
       await logout();
       navigate('/');
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt !",
+      });
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la déconnexion.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -106,13 +96,12 @@ export default function Navbar() {
   };
 
   const getInitials = (name: string) => {
-    if (!name) return 'U';
+    if (!name) return '?';
     return name
       .split(' ')
-      .map(n => n[0])
+      .map(part => part[0])
       .join('')
-      .toUpperCase()
-      .substring(0, 2);
+      .toUpperCase();
   };
 
   // Déterminer si un lien est actif
@@ -201,63 +190,17 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-3">
             {user ? (
               <div className="flex items-center space-x-3">
-                {/* Notifications pour les experts */}
-                {user && user.role === 'expert' && (
+                {/* Notifications pour les experts et créateurs */}
+                {user && (user.role === 'expert' || user.role === 'creator' || user.role === 'influencer') && (
                   <div className="relative">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => setShowNotifications(!showNotifications)}
-                      className="relative text-gray-300 hover:text-purple-400"
-                    >
-                      <Bell className="h-5 w-5" />
-                      {notificationCount > 0 && (
-                        <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs" variant="destructive">
-                          {notificationCount}
-                        </Badge>
-                      )}
-                    </Button>
-                    
-                    {showNotifications && (
-                      <div className="absolute right-0 mt-2 w-80 bg-black/90 border border-purple-500/20 rounded-md shadow-lg overflow-hidden z-50">
-                        <div className="p-3 border-b border-purple-500/20">
-                          <h3 className="font-medium">Notifications</h3>
-                        </div>
-                        <div className="max-h-96 overflow-y-auto">
-                          {notifications.length === 0 ? (
-                            <div className="p-4 text-sm text-gray-400">
-                              Aucune notification
-                            </div>
-                          ) : (
-                            notifications.map((notification) => (
-                              <div key={notification.id} className="p-3 border-b border-purple-500/10 hover:bg-purple-900/10">
-                                <p className="text-sm font-medium">{notification.creatorName} vous a proposé une offre</p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {new Date(notification.createdAt.toDate()).toLocaleString()}
-                                </p>
-                                <div className="mt-2 flex gap-2">
-                                  <Button 
-                                    size="sm" 
-                                    variant="default"
-                                    className="text-xs py-0 h-7 bg-purple-600 hover:bg-purple-700"
-                                    onClick={() => navigate(`/jobs/${notification.jobId}`)}
-                                  >
-                                    Voir l'offre
-                                  </Button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    <NotificationBell />
                   </div>
                 )}
                 
                 {/* Menu dropdown utilisateur */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full overflow-hidden">
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full overflow-hidden">
                       <Avatar>
                         <AvatarImage src={user.photoURL || user.avatar || undefined} />
                         <AvatarFallback className="bg-purple-900/30">{getInitials(user.displayName || user.name)}</AvatarFallback>
@@ -321,58 +264,9 @@ export default function Navbar() {
 
           {/* Mobile: Afficher les notifications et le menu utilisateur */}
           <div className="md:hidden flex items-center space-x-2">
-            {user && user.role === 'expert' && (
+            {user && (user.role === 'expert' || user.role === 'creator' || user.role === 'influencer') && (
               <div className="relative">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative text-gray-300 hover:text-purple-400"
-                >
-                  <Bell className="h-5 w-5" />
-                  {notificationCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs" variant="destructive">
-                      {notificationCount}
-                    </Badge>
-                  )}
-                </Button>
-                
-                {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-72 bg-black/90 border border-purple-500/20 rounded-md shadow-lg overflow-hidden z-50">
-                    <div className="p-3 border-b border-purple-500/20">
-                      <h3 className="font-medium">Notifications</h3>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-4 text-sm text-gray-400">
-                          Aucune notification
-                        </div>
-                      ) : (
-                        notifications.map((notification) => (
-                          <div key={notification.id} className="p-3 border-b border-purple-500/10 hover:bg-purple-900/10">
-                            <p className="text-sm font-medium">{notification.creatorName} vous a proposé une offre</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {new Date(notification.createdAt.toDate()).toLocaleString()}
-                            </p>
-                            <div className="mt-2 flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="default"
-                                className="text-xs py-0 h-7 bg-purple-600 hover:bg-purple-700"
-                                onClick={() => {
-                                  navigate(`/jobs/${notification.jobId}`);
-                                  setShowNotifications(false);
-                                }}
-                              >
-                                Voir l'offre
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+                <NotificationBell />
               </div>
             )}
             

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { X } from 'lucide-react';
+import { notificationService } from '../services/notificationService';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -42,6 +43,11 @@ export default function Messages() {
     if (!user) return;
 
     console.log('Configuration des écouteurs pour l\'utilisateur:', user.uid);
+    console.log('URL params:', {
+      conversationId: searchParams.get('id'),
+      recipientId: searchParams.get('recipient'),
+      recipientName: searchParams.get('name')
+    });
 
     // Si on a un destinataire dans l'URL, créer ou récupérer la conversation
     if (recipientId && recipientName) {
@@ -52,6 +58,24 @@ export default function Messages() {
     // Écouter les conversations en temps réel
     const unsubscribe = messageService.subscribeToConversations(user.uid, (newConversations) => {
       console.log('Nouvelles conversations reçues:', newConversations.length);
+      
+      // Si on arrive depuis une notification, ouvrir la conversation correspondante
+      const conversationIdFromUrl = searchParams.get('id');
+      if (conversationIdFromUrl) {
+        console.log('Recherche de la conversation:', conversationIdFromUrl);
+        const targetConversation = newConversations.find(conv => conv.id === conversationIdFromUrl);
+        
+        if (targetConversation) {
+          console.log('Conversation trouvée, ouverture:', conversationIdFromUrl);
+          setCurrentConversation(conversationIdFromUrl);
+          
+          // Nettoyer l'URL après avoir ouvert la conversation
+          navigate('/messages', { replace: true });
+        } else {
+          console.log('Conversation non trouvée:', conversationIdFromUrl);
+        }
+      }
+
       setConversations(newConversations);
       setLoading(false);
     });
@@ -60,21 +84,34 @@ export default function Messages() {
       console.log('Nettoyage des écouteurs');
       unsubscribe();
     };
-  }, [user, recipientId, recipientName]);
+  }, [user, recipientId, recipientName, searchParams, navigate]);
 
   useEffect(() => {
-    if (!currentConversation) return;
+    if (!currentConversation || !user) return;
+
+    console.log('Setting up message subscription for conversation:', currentConversation);
 
     // Écouter les messages de la conversation courante en temps réel
-    const unsubscribe = messageService.subscribeToMessages(currentConversation, (newMessages) => {
+    const unsubscribe = messageService.subscribeToMessages(currentConversation, async (newMessages) => {
+      // Vérifier s'il y a de nouveaux messages
+      if (newMessages.length > messages.length) {
+        console.log('New messages received:', newMessages.length - messages.length);
+        
+        // Récupérer le dernier message
+        const lastMessage = newMessages[newMessages.length - 1];
+        console.log('Last message:', lastMessage);
+      }
       setMessages(newMessages);
     });
 
     // Marquer les messages comme lus
-    messageService.markConversationAsRead(currentConversation, user?.uid || '');
+    messageService.markConversationAsRead(currentConversation, user.uid);
 
-    return () => unsubscribe();
-  }, [currentConversation, user]);
+    return () => {
+      console.log('Cleaning up message subscription');
+      unsubscribe();
+    };
+  }, [currentConversation, user, messages.length]);
 
   const handleStartConversation = async (userId: string, userName: string) => {
     try {

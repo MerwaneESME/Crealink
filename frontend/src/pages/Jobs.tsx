@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -59,10 +59,39 @@ const Jobs: React.FC = () => {
 
   console.log("Rendu du composant Jobs", { user });
 
+  // Utilisation de useMemo pour les jobs filtrés
+  const computedFilteredJobs = useMemo(() => {
+    let filtered = jobs;
+    
+    if (searchTerm) {
+      const normalizedSearchTerm = normalizeText(searchTerm);
+      filtered = filtered.filter(job => 
+        normalizeText(job.title).includes(normalizedSearchTerm) || 
+        normalizeText(job.description).includes(normalizedSearchTerm)
+      );
+    }
+    
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(job => job.status === filterStatus);
+    }
+
+    if (selectedMetiers.length > 0) {
+      filtered = filtered.filter(job => 
+        selectedMetiers.includes(job.metier || 'Autre')
+      );
+    }
+    
+    return filtered;
+  }, [searchTerm, filterStatus, selectedMetiers, jobs]);
+
   useEffect(() => {
-    console.log("useEffect Jobs", { user });
+    setFilteredJobs(computedFilteredJobs);
+  }, [computedFilteredJobs]);
+
+  useEffect(() => {
+    if (!user) return;
     fetchJobs();
-  }, [user]); // user est optionnel ici car déjà vérifié par ProtectedRoute
+  }, [user]);
 
   useEffect(() => {
     // Scroll to top when component mounts
@@ -159,33 +188,6 @@ const Jobs: React.FC = () => {
       .replace(/\s+/g, '') // Enlève tous les espaces
       .trim();
   };
-
-  useEffect(() => {
-    let filtered = jobs;
-    
-    // Filtre par terme de recherche avec normalisation
-    if (searchTerm) {
-      const normalizedSearchTerm = normalizeText(searchTerm);
-      filtered = filtered.filter(job => 
-        normalizeText(job.title).includes(normalizedSearchTerm) || 
-        normalizeText(job.description).includes(normalizedSearchTerm)
-      );
-    }
-    
-    // Filtre par statut
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(job => job.status === filterStatus);
-    }
-
-    // Filtre par corps de métier
-    if (selectedMetiers.length > 0) {
-      filtered = filtered.filter(job => 
-        selectedMetiers.includes(job.metier || 'Autre')
-      );
-    }
-    
-    setFilteredJobs(filtered);
-  }, [searchTerm, filterStatus, selectedMetiers, jobs]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);

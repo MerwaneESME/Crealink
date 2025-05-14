@@ -17,6 +17,7 @@ import {
   arrayRemove,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { notificationService } from './notificationService';
 
 export interface Message {
   id: string;
@@ -177,20 +178,69 @@ export const messageService = {
   },
 
   // Envoyer un message
-  async sendMessage(conversationId: string, senderId: string, content: string): Promise<void> {
+  async sendMessage(conversationId: string, senderId: string, content: string) {
     try {
+      console.log('Sending message:', { conversationId, senderId, content });
+      
+      // Récupérer les détails de l'expéditeur
+      const senderDoc = await getDoc(doc(db, 'users', senderId));
+      const senderData = senderDoc.data();
+      console.log('Sender details:', senderData);
+
+      // Récupérer les détails de la conversation pour trouver le destinataire
+      const conversationDoc = await getDoc(doc(db, 'conversations', conversationId));
+      const conversationData = conversationDoc.data();
+      console.log('Conversation details:', conversationData);
+
+      if (!conversationData) {
+        throw new Error('Conversation not found');
+      }
+
+      // Trouver l'ID du destinataire (l'autre participant)
+      const recipientId = conversationData.participants.find((id: string) => id !== senderId);
+      console.log('Recipient ID:', recipientId);
+
       const messageData = {
-        senderId,
         content,
+        senderId,
         createdAt: serverTimestamp(),
-        read: false
+        read: false,
+        senderDetails: {
+          name: senderData?.name || 'Utilisateur',
+          avatar: senderData?.avatar
+        }
       };
 
-      // Ajouter le message à la collection des messages
-      await addDoc(collection(db, 'conversations', conversationId, 'messages'), messageData);
+      console.log('Creating message with data:', messageData);
+      const messageRef = await addDoc(
+        collection(db, 'conversations', conversationId, 'messages'),
+        messageData
+      );
+      console.log('Message created successfully:', messageRef.id);
 
-      // Mettre à jour les informations de la conversation
-      await updateDoc(doc(db, 'conversations', conversationId), {
+      // Créer une notification pour le destinataire
+      try {
+        const notificationData = {
+          userId: recipientId,
+          message: {
+            content,
+            senderId,
+            senderDetails: {
+              name: senderData?.name || 'Utilisateur',
+              avatar: senderData?.avatar
+            },
+            conversationId
+          }
+        };
+        console.log('Creating notification for recipient:', notificationData);
+        await notificationService.createMessageNotification(notificationData);
+      } catch (error) {
+        console.error('Error creating notification:', error);
+      }
+
+      // Mettre à jour la conversation
+      const conversationRef = doc(db, 'conversations', conversationId);
+      await updateDoc(conversationRef, {
         lastMessage: {
           content,
           senderId,
@@ -198,8 +248,11 @@ export const messageService = {
         },
         updatedAt: serverTimestamp()
       });
+      console.log('Conversation updated with last message');
+
+      return messageRef.id;
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
+      console.error('Error sending message:', error);
       throw error;
     }
   },

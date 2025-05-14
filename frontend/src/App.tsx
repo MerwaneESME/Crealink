@@ -16,6 +16,8 @@ import { Toaster } from './components/ui/toaster';
 import { useAuth } from './contexts/AuthContext';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from './config/firebase';
+import { NotificationListener } from './components/NotificationListener';
+import AppRoutes from './AppRoutes';
 
 // Pages
 import Home from './pages/Home';
@@ -218,11 +220,12 @@ function AppLayout() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router>
+      <AuthProvider>
+        <NotificationListener />
         <AppLayout />
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
