@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import NeonLogo from './NeonLogo';
 import { notificationService, Notification } from '@/services/notificationService';
 import { NotificationBell } from './NotificationBell';
+import UserAvatar from '@/components/ui/user-avatar';
 
 interface Notification {
   id: string;
@@ -201,10 +202,7 @@ export default function Navbar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full overflow-hidden">
-                      <Avatar>
-                        <AvatarImage src={user.photoURL || user.avatar || undefined} />
-                        <AvatarFallback className="bg-purple-900/30">{getInitials(user.displayName || user.name)}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar user={user} size="sm" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-black/90 border-purple-500/20">
@@ -274,10 +272,7 @@ export default function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full overflow-hidden">
-                    <Avatar>
-                      <AvatarImage src={user.photoURL || user.avatar || undefined} />
-                      <AvatarFallback className="bg-purple-900/30">{getInitials(user.displayName || user.name)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar user={user} size="sm" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-black/90 border-purple-500/20">

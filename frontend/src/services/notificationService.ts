@@ -105,5 +105,11 @@ export const notificationService = {
       console.error('Erreur lors de la suppression de la notification:', error);
       throw error;
     }
+  },
+
+  // Réinitialiser les notifications affichées
+  resetDisplayedNotifications() {
+    // Réinitialiser l'état des notifications affichées
+    // Cette méthode est appelée lors de la déconnexion
   }
 }; 

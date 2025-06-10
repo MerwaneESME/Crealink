@@ -17,7 +17,6 @@ import { useAuth } from './contexts/AuthContext';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from './config/firebase';
 import { NotificationListener } from './components/NotificationListener';
-import AppRoutes from './AppRoutes';
 
 // Pages
 import Home from './pages/Home';
@@ -141,9 +140,15 @@ function AppLayout() {
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/register/role" element={<RoleSelection />} />
           <Route path="/role-selection" element={<RoleSelection />} />
           <Route path="/debug-jobs" element={<DebugJobs />} />
           <Route path="/profiles" element={
+            <ProtectedRoute allowedRoles={['expert', 'creator', 'influencer']}>
+              <ExpertProfiles />
+            </ProtectedRoute>
+          } />
+          <Route path="/profiles/experts" element={
             <ProtectedRoute allowedRoles={['expert', 'creator', 'influencer']}>
               <ExpertProfiles />
             </ProtectedRoute>

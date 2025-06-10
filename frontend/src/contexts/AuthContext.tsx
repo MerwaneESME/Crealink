@@ -3,11 +3,13 @@ import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
+  signOut as firebaseSignOut,
   onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { auth, db, googleProvider } from '../config/firebase';
 import { authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
 
@@ -15,48 +17,53 @@ import { notificationService } from '@/services/notificationService';
 export type UserRole = 'admin' | 'creator' | 'expert' | 'pending' | 'influencer';
 
 export interface User {
-  showPhone: boolean;
-  showEmail: boolean;
-  rating: string;
-  useDisplayNameOnly: any;
   uid: string;
   email: string | null;
-  name: string;
-  role: UserRole;
-  avatar?: string;
+  displayName: string | null;
+  firstName?: string;
+  lastName?: string;
+  originalDisplayName?: string;
+  photoURL: string | null;
+  role?: 'expert' | 'creator' | 'pending';
+  onboardingStep?: 'name_confirmation' | 'role_selection' | 'profile_completion';
   description?: string;
   bio?: string;
-  createdAt: string;
-  updatedAt: string;
-  verified: boolean;
-  displayName?: string;
-  photoURL?: string | null;
   phone?: string;
   youtube?: string;
-  twitch?: string;
   instagram?: string;
-  publishingFrequency?: string;
-  challenges?: string;
-  previousCollaborations?: string;
-  neededServices?: string;
-  goals?: string;
-  expertise?: string;
-  experiences?: string[];
-  skills?: string[] | string;
-  education?: string;
-  favoriteNetwork?: 'youtube' | 'twitch' | 'instagram' | null;
-  linkedin?: string;
-  twitter?: string;
+  twitch?: string;
+  tiktok?: string;
+  skills?: string[];
+  expertise?: {
+    mainType: string;
+    subType: string;
+    description: string;
+    level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+    value: string;
+  };
+  creator?: {
+    mainType: string;
+    subType: string;
+    description: string;
+    platforms: string[];
+    audienceSize: string;
+  };
+  onboardingCompleted?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
+  [key: string]: any;
 }
 
 interface AuthContextType {
   user: User | null;
-  register: (email: string, password: string, userData: any) => Promise<User>;
-  login: (email: string, password: string) => Promise<User>;
+  register: (email: string, password: string, userData: Partial<User>) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateUserProfile: (data: any, uid?: string) => Promise<boolean>;
+  updateUserProfile: (data: Partial<User>) => Promise<void>;
   loading: boolean;
-  refreshUser: () => Promise<boolean | undefined>;
+  refreshUser: () => Promise<void>;
+  error: string | null;
+  signInWithGoogle: () => Promise<{ isNewUser: boolean; user: User }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -76,8 +83,9 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const refreshUser = async () => {
+  const refreshUser = async (): Promise<void> => {
     if (!user) return;
     try {
       console.log("Rafraîchissement des données utilisateur pour:", user.uid);
@@ -86,7 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       if (userSnap.exists()) {
         const userData = userSnap.data();
-        console.log("Nouvelles données utilisateur:", userData);
+        console.log("Données utilisateur brutes:", userData);
         
         const updatedUser: User = {
           uid: userData.uid,
@@ -111,7 +119,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           goals: userData.goals,
           expertise: userData.expertise,
           experiences: userData.experiences,
-          skills: userData.skills,
+          skills: Array.isArray(userData.skills) ? userData.skills : [],
           education: userData.education,
           favoriteNetwork: userData.favoriteNetwork,
           linkedin: userData.linkedin,
@@ -119,101 +127,146 @@ export function AuthProvider({ children }: AuthProviderProps) {
           showPhone: userData.showPhone || false,
           showEmail: userData.showEmail || false,
           rating: userData.rating || '',
-          useDisplayNameOnly: userData.useDisplayNameOnly
+          useDisplayNameOnly: userData.useDisplayNameOnly || false,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          tiktok: userData.tiktok,
+          expertiseCreator: userData.expertiseCreator,
+          creator: userData.creator,
+          onboardingCompleted: userData.onboardingCompleted || false
         };
         
-        console.log("Mise à jour de l'état utilisateur avec:", updatedUser);
+        console.log("Données utilisateur mises à jour:", updatedUser);
         setUser(updatedUser);
-        return true;
-      } else {
-        console.warn("Document utilisateur non trouvé lors du rafraîchissement");
-        return false;
       }
     } catch (error) {
       console.error('Erreur lors du rafraîchissement des données utilisateur:', error);
-      return false;
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = authService.onAuthStateChange(async (firebaseUser) => {
+  const handleAuthStateChanged = async (firebaseUser: FirebaseUser | null) => {
+    setLoading(true);
+    try {
       if (firebaseUser) {
-        try {
-          console.log('Firebase user:', firebaseUser);
-          const userData = await authService.getUserData(firebaseUser.uid);
-          console.log('User data from Firestore:', userData);
-          if (userData) {
-            let photoURL = firebaseUser.photoURL || userData.avatar || userData.photoURL;
-            if (photoURL) {
-              photoURL = photoURL.includes('?') 
-                ? `${photoURL}&t=${Date.now()}` 
-                : `${photoURL}?t=${Date.now()}`;
-            }
-            
-            const userWithRole: User = {
-              uid: userData.uid || firebaseUser.uid,
-              email: userData.email || firebaseUser.email,
-              name: userData.name || '',
-              role: userData.role || 'pending',
-              verified: userData.verified || false,
-              createdAt: userData.createdAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              displayName: firebaseUser.displayName || userData.name,
-              photoURL,
-              description: userData.description || userData.bio,
-              bio: userData.bio,
-              phone: userData.phone,
-              youtube: userData.youtube,
-              twitch: userData.twitch,
-              instagram: userData.instagram,
-              publishingFrequency: userData.publishingFrequency,
-              challenges: userData.challenges,
-              previousCollaborations: userData.previousCollaborations,
-              neededServices: userData.neededServices,
-              goals: userData.goals,
-              expertise: userData.expertise,
-              experiences: userData.experiences,
-              skills: userData.skills,
-              education: userData.education,
-              favoriteNetwork: userData.favoriteNetwork,
-              linkedin: userData.linkedin,
-              twitter: userData.twitter,
-              showPhone: false,
-              showEmail: false,
-              rating: '',
-              useDisplayNameOnly: undefined
-            };
-            console.log('User with role:', userWithRole);
-            setUser(userWithRole);
-          }
-        } catch (error) {
-          console.error('Erreur lors de la récupération des données utilisateur:', error);
+        // Récupérer les données utilisateur de Firestore
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          console.log("Données utilisateur chargées:", userData);
+          console.log("Skills:", userData.skills);
+          setUser(userData);
+        } else {
+          // Si l'utilisateur n'existe pas dans Firestore, créer un document par défaut
+          const defaultUser: User = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || '',
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: 'pending',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            verified: false,
+            showPhone: false,
+            showEmail: true,
+            rating: '0',
+            useDisplayNameOnly: false,
+            onboardingCompleted: false,
+            skills: [] // Initialiser un tableau vide pour les compétences
+          };
+          await setDoc(doc(db, 'users', firebaseUser.uid), defaultUser);
+          setUser(defaultUser);
         }
       } else {
         setUser(null);
       }
+    } catch (error) {
+      console.error('Erreur lors de la vérification de l\'authentification:', error);
+      setError('Une erreur est survenue lors de la vérification de l\'authentification');
+    } finally {
       setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = authService.onAuthStateChange(handleAuthStateChanged);
 
     return () => unsubscribe();
   }, []);
 
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const { user: firebaseUser } = result;
+      
+      // Vérifier si l'utilisateur existe déjà
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+      const isNewUser = !userDoc.exists();
+      
+      if (isNewUser) {
+        // Créer un nouveau document utilisateur avec les données de Google
+        const userData: User = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || '',
+          firstName: firebaseUser.displayName?.split(' ')[0] || '',
+          lastName: firebaseUser.displayName?.split(' ')[1] || '',
+          originalDisplayName: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL,
+          role: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          onboardingCompleted: false,
+          onboardingStep: 'name_confirmation'
+        };
+        
+        await setDoc(doc(db, 'users', firebaseUser.uid), userData);
+        return { isNewUser, user: userData };
+      }
+      
+      const userData = (await getDoc(doc(db, 'users', firebaseUser.uid))).data() as User;
+      return { isNewUser, user: userData };
+    } catch (error: any) {
+      console.error("Erreur lors de la connexion avec Google:", error);
+      throw new Error(error.message);
+    }
+  };
+
   const value = {
     user,
     loading,
-    register: authService.register,
-    login: authService.login,
+    error,
+    register: async (email: string, password: string, userData: Partial<User>) => {
+      try {
+        await authService.register(email, password, userData);
+        await refreshUser();
+      } catch (error) {
+        console.error('Erreur lors de la création de l\'utilisateur:', error);
+        setError('Erreur lors de la création de l\'utilisateur');
+      }
+    },
+    login: async (email: string, password: string) => {
+      try {
+        await authService.login(email, password);
+        await refreshUser();
+      } catch (error) {
+        console.error('Erreur lors de la connexion:', error);
+        setError('Erreur lors de la connexion');
+      }
+    },
+    signInWithGoogle,
     logout: async () => {
       try {
-        await signOut(auth);
+        await firebaseSignOut(auth);
         notificationService.resetDisplayedNotifications();
       } catch (error) {
         console.error('Erreur lors de la déconnexion:', error);
         throw error;
       }
     },
-    updateUserProfile: async (data: any, uid?: string) => {
-      const userId = uid || user?.uid;
+    updateUserProfile: async (data: Partial<User>) => {
+      const userId = user?.uid;
       if (!userId) {
         throw new Error('Aucun utilisateur connecté');
       }
@@ -240,8 +293,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setTimeout(async () => {
           await refreshUser();
         }, 500);
-        
-        return true;
       } catch (error) {
         console.error("Erreur lors de la mise à jour du profil:", error);
         throw error;

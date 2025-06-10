@@ -1,23 +1,34 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { Search, Loader2 } from 'lucide-react';
+import { profileService } from '@/services/profileService';
+import { ProfileCard } from '@/components/profile/ProfileCard';
+import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   id: string;
+  uid: string;
   name: string;
+  displayName: string;
   description: string;
-  profession: string;
   userId: string;
+  role: 'expert' | 'creator';
+  expertise?: {
+    mainType: string;
+    subType: string;
+    description: string;
+  };
+  skills?: string[];
+  photoURL?: string;
 }
 
 const Profiles = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,14 +40,11 @@ const Profiles = () => {
   }, []);
 
   const fetchProfiles = async () => {
+    setIsLoading(true);
+    setError('');
+    
     try {
-      const profilesRef = collection(db, 'profiles');
-      const snapshot = await getDocs(profilesRef);
-      const profilesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Profile[];
-      
+      const profilesList = await profileService.getAllProfiles() as Profile[];
       setProfiles(profilesList);
       setFilteredProfiles(profilesList);
     } catch (err) {
@@ -57,92 +65,115 @@ const Profiles = () => {
     return text
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Enlève les accents
-      .replace(/\s+/g, '') // Enlève tous les espaces
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '')
       .trim();
   };
 
   useEffect(() => {
     if (searchTerm) {
       const normalizedSearchTerm = normalizeText(searchTerm);
-      const filtered = profiles.filter(profile => 
-        normalizeText(profile.name).includes(normalizedSearchTerm) || 
-        normalizeText(profile.description).includes(normalizedSearchTerm) ||
-        normalizeText(profile.profession).includes(normalizedSearchTerm)
-      );
+      const filtered = profiles.filter(profile => {
+        const searchableText = normalizeText([
+          profile.name,
+          profile.displayName,
+          profile.description,
+          ...(profile.skills || []),
+          profile.expertise?.mainType,
+          profile.expertise?.subType,
+          profile.expertise?.description
+        ].filter(Boolean).join(' '));
+        
+        return searchableText.includes(normalizedSearchTerm);
+      });
       setFilteredProfiles(filtered);
     } else {
       setFilteredProfiles(profiles);
     }
   }, [searchTerm, profiles]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const handleViewProfile = (profileId: string) => {
+    navigate(`/profile/${profileId}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-red-500">
-            <p>{error}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleContact = (name: string) => {
+    // Implémenter la logique de contact ici
+    toast({
+      title: "Contact",
+      description: `Contacter ${name}`,
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-purple-950/20 pt-24">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-          Profils
-        </h1>
-
-        <div className="mb-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Rechercher un profil..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="pl-10 bg-black/50 border-purple-500/20 focus:border-purple-500"
-            />
-          </div>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <h1 className="text-2xl font-bold text-white">Profils</h1>
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            type="text"
+            placeholder="Rechercher un profil..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-purple-900/10 border-purple-500/20"
+          />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProfiles.map((profile) => (
-            <div
-              key={profile.id}
-              className="bg-black/80 rounded-lg p-6 border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300"
-            >
-              <h2 className="text-xl font-semibold text-white mb-2">{profile.name}</h2>
-              <p className="text-purple-400 mb-2">{profile.profession}</p>
-              <p className="text-gray-400">{profile.description}</p>
-            </div>
-          ))}
-        </div>
-
-        {filteredProfiles.length === 0 && (
-          <div className="text-center text-gray-400 mt-8">
-            Aucun profil trouvé
-          </div>
-        )}
       </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+          <span className="ml-3 text-gray-400">Chargement des profils...</span>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <p className="text-red-400">{error}</p>
+          <Button 
+            onClick={fetchProfiles}
+            variant="outline"
+            className="mt-4"
+          >
+            Réessayer
+          </Button>
+        </div>
+      ) : filteredProfiles.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-400">
+            {searchTerm ? "Aucun profil ne correspond à votre recherche" : "Aucun profil disponible"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProfiles.map((profile) => {
+            // Filtrer les compétences pour éviter les doublons avec l'expertise
+            const filteredSkills = profile.skills?.filter(skill => {
+              if (!profile.expertise) return true;
+              const expertiseTerms = [
+                profile.expertise.mainType.toLowerCase(),
+                profile.expertise.subType?.toLowerCase() || ''
+              ];
+              return !expertiseTerms.includes(skill.toLowerCase());
+            });
+
+            return (
+              <ProfileCard
+                key={profile.id}
+                profile={{
+                  uid: profile.uid,
+                  photoURL: profile.photoURL,
+                  displayName: profile.displayName || profile.name,
+                  role: profile.role,
+                  expertise: profile.expertise,
+                  description: profile.description,
+                  skills: filteredSkills
+                }}
+                onViewProfile={() => handleViewProfile(profile.id)}
+                onContact={handleContact}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
@@ -40,6 +40,22 @@ const firebaseConfig = {
 // Initialiser les services Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
+// Configurer la persistance de l'authentification
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log('Persistance de l\'authentification configurée avec succès');
+  })
+  .catch((error) => {
+    console.error('Erreur lors de la configuration de la persistance:', error);
+  });
+
+// Configurer le provider Google
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
 const db = getFirestore(app);
 
 // Initialiser Storage avec des options spécifiques
@@ -70,5 +86,5 @@ const initAnalytics = async () => {
 initAnalytics();
 
 // Exports
-export { auth, db, storage, analytics };
+export { auth, db, storage, analytics, googleProvider };
 export default app; 

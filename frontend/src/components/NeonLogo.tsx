@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 interface NeonLogoProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   onClick?: () => void;
 }
@@ -16,10 +16,11 @@ const NeonLogo: React.FC<NeonLogoProps> = ({
 }) => {
   // Définir les tailles
   const sizes = {
+    xs: 'w-24',
     sm: 'w-32',
     md: 'w-40',
     lg: 'w-48',
-    xl: 'w-64'
+    xl: 'w-56'
   };
 
   return (

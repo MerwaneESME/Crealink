@@ -4,7 +4,13 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User as FirebaseUser,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup
 } from 'firebase/auth';
 import { 
   doc, 
@@ -16,7 +22,8 @@ import {
   where,
   getDocs,
   enableNetwork,
-  disableNetwork
+  disableNetwork,
+  deleteDoc
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User } from '../contexts/AuthContext';
@@ -89,29 +96,32 @@ async function loginUser(email: string, password: string): Promise<User> {
 
 export const authService = {
   // Créer un nouvel utilisateur
-  async register(email: string, password: string, userData: Partial<User>): Promise<User> {
+  async register(email: string, password: string, userData: Partial<User>): Promise<void> {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       // Créer le document utilisateur dans Firestore
-      const userDoc: User = {
+      const newUser: User = {
         uid: user.uid,
-        email: user.email || '',
+        email: email,
         name: userData.name || '',
-        role: 'pending',
+        role: userData.role || 'creator',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         verified: false,
+        showPhone: false,
+        showEmail: true,
+        rating: '0',
+        useDisplayNameOnly: false,
+        onboardingCompleted: true,
         ...userData
       };
 
-      await setDoc(doc(db, 'users', user.uid), userDoc);
-
-      return userDoc;
-    } catch (error) {
-      console.error('Erreur lors de l\'inscription:', error);
-      throw error;
+      await setDoc(doc(db, 'users', user.uid), newUser);
+    } catch (error: any) {
+      console.error('Erreur lors de la création de l\'utilisateur:', error);
+      throw new Error(error.message || 'Une erreur est survenue lors de la création de l\'utilisateur');
     }
   },
 
@@ -129,29 +139,32 @@ export const authService = {
 
       if (!userData) {
         // Créer un document utilisateur par défaut si nécessaire
-        const defaultUserData: Partial<User> = {
+        const defaultUserData: User = {
           uid: user.uid,
           email: user.email || '',
           name: user.displayName || '',
-          role: 'creator',
+          role: 'pending',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          verified: false,
+          showPhone: false,
+          showEmail: false,
+          rating: '',
+          useDisplayNameOnly: false,
+          expertise: {
+            mainType: undefined,
+            subType: undefined,
+            description: undefined
+          }
         };
         
         await setDoc(doc(db, 'users', user.uid), defaultUserData);
-        return defaultUserData as User;
+        return defaultUserData;
       }
 
-      return {
-        ...userData,
-        displayName: user.displayName || userData.name,
-        photoURL: user.photoURL || userData.avatar
-      };
+      return userData;
     } catch (error: any) {
       console.error('Erreur lors de la connexion:', error);
-      if (error.code === 'auth/invalid-credential') {
-        throw new Error('Email ou mot de passe incorrect');
-      }
       throw new Error(error.message || 'Une erreur est survenue lors de la connexion');
     }
   },
@@ -241,6 +254,100 @@ export const authService = {
       return userData;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du rôle:', error);
+      throw error;
+    }
+  },
+
+  // Connexion avec Google
+  async signInWithGoogle(): Promise<{ isNewUser: boolean; user: User }> {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Vérifier si l'utilisateur existe déjà dans Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const isNewUser = !userDoc.exists();
+      
+      if (isNewUser) {
+        // Créer un nouveau document utilisateur avec les informations de base de Google
+        const newUser: User = {
+          uid: user.uid,
+          email: user.email || '',
+          name: user.displayName || '',
+          role: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          verified: user.emailVerified,
+          showPhone: false,
+          showEmail: true,
+          rating: '0',
+          useDisplayNameOnly: false,
+          onboardingCompleted: false,
+          photoURL: user.photoURL || undefined
+        };
+
+        await setDoc(doc(db, 'users', user.uid), newUser);
+        return { isNewUser: true, user: newUser };
+      }
+
+      const userData = userDoc.data() as User;
+      return { isNewUser: false, user: userData };
+    } catch (error: any) {
+      console.error('Erreur lors de la connexion avec Google:', error);
+      throw new Error(error.message || 'Une erreur est survenue lors de la connexion avec Google');
+    }
+  },
+
+  // Ré-authentifier l'utilisateur
+  async reauthenticate(password?: string): Promise<void> {
+    if (!auth.currentUser || !auth.currentUser.email) {
+      throw new Error('Aucun utilisateur connecté');
+    }
+
+    try {
+      if (password) {
+        // Ré-authentification avec email/mot de passe
+        const credential = EmailAuthProvider.credential(
+          auth.currentUser.email,
+          password
+        );
+        await reauthenticateWithCredential(auth.currentUser, credential);
+      } else {
+        // Ré-authentification avec Google
+        const provider = new GoogleAuthProvider();
+        await reauthenticateWithPopup(auth.currentUser, provider);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la ré-authentification:', error);
+      throw error;
+    }
+  },
+
+  // Supprimer un compte utilisateur
+  async deleteAccount(uid: string, password?: string): Promise<void> {
+    try {
+      // Ré-authentifier l'utilisateur avant la suppression
+      await this.reauthenticate(password);
+      
+      // Supprimer le document utilisateur de Firestore
+      await deleteDoc(doc(db, 'users', uid));
+      
+      // Supprimer les paramètres utilisateur
+      await deleteDoc(doc(db, 'userSettings', uid));
+      
+      // Supprimer le portfolio
+      const portfolioQuery = query(collection(db, 'portfolio'), where('creatorId', '==', uid));
+      const portfolioSnapshot = await getDocs(portfolioQuery);
+      const deletePromises = portfolioSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      
+      // Supprimer le compte Firebase Auth
+      if (auth.currentUser) {
+        await deleteUser(auth.currentUser);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du compte:', error);
       throw error;
     }
   }

@@ -5,22 +5,42 @@ import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, User, Briefcase, Star, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Search, User, Briefcase, Star, MessageSquare, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, limit, startAfter, orderBy, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ProfileCard from '@/components/profile/ProfileCard';
+import { Badge } from '@/components/ui/badge';
+import { EXPERT_SKILLS } from '@/constants/skills';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Types
 interface ExpertProfile {
   uid: string;
   displayName: string;
   email: string;
-  photoURL: string;
-  bio: string;
+  photoURL: string | null;
+  description: string;
   skills: string[];
   rating: number;
   projectCount: number;
-  role: string;
+  role: 'expert';
+  expertise?: {
+    mainType: string;
+    subType: string;
+    description: string;
+  };
 }
 
 // Nombre d'experts à charger par page
@@ -39,20 +59,117 @@ export default function ExpertProfiles() {
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [openImage, setOpenImage] = useState<string | null>(null);
+  const [selectedMainType, setSelectedMainType] = useState<string>('');
+  const [selectedSubType, setSelectedSubType] = useState<string>('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [skillSearchQuery, setSkillSearchQuery] = useState('');
 
-  // Filtrer les experts en fonction de la recherche
+  // Liste des types d'expertise principaux
+  const expertTypes = {
+    editor: "Monteur",
+    designer: "Designer",
+    thumbnailMaker: "Miniaturiste",
+    soundDesigner: "Sound Designer",
+    motionDesigner: "Motion Designer",
+    videoEditor: "Réalisateur",
+    photographer: "Photographe",
+    colorist: "Coloriste"
+  };
+
+  // Liste des sous-types par type principal
+  const subTypes: Record<string, Record<string, string>> = {
+    editor: {
+      shorts: "Monteur Shorts/TikTok",
+      youtube: "Monteur YouTube",
+      documentary: "Monteur Documentaire",
+      gaming: "Monteur Gaming",
+      corporate: "Monteur Corporate"
+    },
+    designer: {
+      logo: "Logo Designer",
+      branding: "Branding Designer",
+      ui: "UI Designer",
+      illustration: "Illustrateur"
+    },
+    // ... autres sous-types ...
+  };
+
+  // Filtrer les experts en fonction de tous les critères
   const filteredExperts = useMemo(() => {
-    if (searchQuery.trim() === '') {
-      return experts;
+    let filtered = experts;
+
+    // Filtre par recherche textuelle
+    if (searchQuery.trim()) {
+      const lowerCaseQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(expert => 
+        expert.displayName.toLowerCase().includes(lowerCaseQuery) || 
+        expert.description?.toLowerCase().includes(lowerCaseQuery)
+      );
     }
-    
-    const lowerCaseQuery = searchQuery.toLowerCase();
-    return experts.filter(expert => 
-      expert.displayName.toLowerCase().includes(lowerCaseQuery) || 
-      expert.bio?.toLowerCase().includes(lowerCaseQuery) ||
-      expert.skills?.some(skill => skill.toLowerCase().includes(lowerCaseQuery))
+
+    // Filtre par type principal d'expertise
+    if (selectedMainType) {
+      filtered = filtered.filter(expert => 
+        expert.expertise?.mainType === selectedMainType
+      );
+    }
+
+    // Filtre par sous-type d'expertise
+    if (selectedSubType) {
+      filtered = filtered.filter(expert => 
+        expert.expertise?.subType === selectedSubType
+      );
+    }
+
+    // Filtre par compétences
+    if (selectedSkills.length > 0) {
+      filtered = filtered.filter(expert => 
+        selectedSkills.every(skill => expert.skills?.includes(skill))
+      );
+    }
+
+    return filtered;
+  }, [experts, searchQuery, selectedMainType, selectedSubType, selectedSkills]);
+
+  // Filtrer les compétences en fonction de la recherche
+  const filteredSkills = useMemo(() => {
+    if (!skillSearchQuery.trim()) {
+      return EXPERT_SKILLS;
+    }
+
+    const query = skillSearchQuery.toLowerCase();
+    const filtered: typeof EXPERT_SKILLS = {};
+
+    Object.entries(EXPERT_SKILLS).forEach(([category, subcategories]) => {
+      const filteredSubcategories = subcategories.map(subcat => ({
+        name: subcat.name,
+        skills: subcat.skills.filter(skill => 
+          skill.toLowerCase().includes(query)
+        )
+      })).filter(subcat => subcat.skills.length > 0);
+
+      if (filteredSubcategories.length > 0) {
+        filtered[category] = filteredSubcategories;
+      }
+    });
+
+    return filtered;
+  }, [skillSearchQuery]);
+
+  const handleSkillSelect = (skill: string) => {
+    setSelectedSkills(prev => 
+      prev.includes(skill) 
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
     );
-  }, [searchQuery, experts]);
+  };
+
+  const clearFilters = () => {
+    setSelectedMainType('');
+    setSelectedSubType('');
+    setSelectedSkills([]);
+  };
 
   // Fonction pour compter les projets d'un expert (version simplifiée)
   const countExpertProjects = async (expertId: string): Promise<number> => {
@@ -108,13 +225,14 @@ export default function ExpertProfiles() {
             uid: docSnapshot.id,
             displayName: expertData.displayName || expertData.name || 'Expert Anonyme',
             email: expertData.email || '',
-            photoURL: expertData.photoURL || expertData.avatar || '',
-            bio: expertData.description || expertData.bio || 'Aucune biographie disponible',
-            skills: expertData.skills || [],
-            rating: expertData.rating || 0,
+            photoURL: expertData.photoURL || expertData.avatar || null,
+            description: expertData.description || expertData.bio || 'Aucune description disponible',
+            skills: Array.isArray(expertData.skills) ? expertData.skills : [],
+            rating: typeof expertData.rating === 'number' ? expertData.rating : 0,
             projectCount: 0,
-            role: expertData.role || 'expert'
-          });
+            role: 'expert' as const,
+            expertise: expertData.expertise
+          } as ExpertProfile);
         });
         
         // Mettre à jour l'état avec les données de base des experts
@@ -171,13 +289,14 @@ export default function ExpertProfiles() {
                   uid: doc.id,
                   displayName: userData.displayName || userData.name || 'Expert Anonyme',
                   email: userData.email || '',
-                  photoURL: userData.photoURL || userData.avatar || '',
-                  bio: userData.description || userData.bio || 'Aucune biographie disponible',
+                  photoURL: userData.photoURL || userData.avatar || null,
+                  description: userData.description || userData.bio || 'Aucune biographie disponible',
                   skills: userData.skills || [],
                   rating: userData.rating || 0,
                   projectCount: 0, // On mettra à jour cette valeur plus tard
-                  role: 'expert'
-                };
+                  role: 'expert' as const,
+                  expertise: userData.expertise
+                } as ExpertProfile;
               });
             
             setExperts(expertsData);
@@ -246,13 +365,14 @@ export default function ExpertProfiles() {
           uid: docSnapshot.id,
           displayName: expertData.displayName || expertData.name || 'Expert Anonyme',
           email: expertData.email || '',
-          photoURL: expertData.photoURL || expertData.avatar || '',
-          bio: expertData.description || expertData.bio || 'Aucune biographie disponible',
-          skills: expertData.skills || [],
-          rating: expertData.rating || 0,
+          photoURL: expertData.photoURL || expertData.avatar || null,
+          description: expertData.description || expertData.bio || 'Aucune description disponible',
+          skills: Array.isArray(expertData.skills) ? expertData.skills : [],
+          rating: typeof expertData.rating === 'number' ? expertData.rating : 0,
           projectCount: 0,
-          role: expertData.role || 'expert'
-        });
+          role: 'expert' as const,
+          expertise: expertData.expertise
+        } as ExpertProfile);
       });
       
       // Ajouter les nouveaux experts à la liste existante
@@ -325,10 +445,135 @@ export default function ExpertProfiles() {
             <Button
               onClick={() => navigate('/profiles/creators')}
               variant="outline"
-              className="border-purple-400 text-purple-400 hover:bg-purple-400/10"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
             >
               Voir les créateurs de contenu
             </Button>
+            
+            {/* Bouton de filtres */}
+            <Popover open={showFilters} onOpenChange={setShowFilters}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="relative border-purple-500/30 text-purple-400 hover:bg-purple-900/20"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtres
+                  {(selectedMainType || selectedSubType || selectedSkills.length > 0) && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2 text-sm">Spécialité</h4>
+                    <Select
+                      value={selectedMainType}
+                      onValueChange={setSelectedMainType}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Toutes les spécialités" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(expertTypes).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedMainType && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-sm">Sous-spécialité</h4>
+                      <Select
+                        value={selectedSubType}
+                        onValueChange={setSelectedSubType}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Toutes les sous-spécialités" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(subTypes[selectedMainType] || {}).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="font-medium mb-2 text-sm">Compétences</h4>
+                    <div className="space-y-2">
+                      {/* Barre de recherche des compétences */}
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          value={skillSearchQuery}
+                          onChange={(e) => setSkillSearchQuery(e.target.value)}
+                          placeholder="Rechercher une compétence..."
+                          className="pl-8 bg-black/20 border-purple-500/30"
+                        />
+                        {skillSearchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 hover:bg-purple-900/20"
+                            onClick={() => setSkillSearchQuery('')}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Liste des compétences filtrées */}
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {Object.entries(filteredSkills).map(([category, subcategories]) => (
+                          <div key={category}>
+                            <h5 className="text-sm font-medium text-gray-400 mb-1">{category}</h5>
+                            <div className="flex flex-wrap gap-1">
+                              {subcategories.map(subcat => 
+                                subcat.skills.map(skill => (
+                                  <Badge
+                                    key={skill}
+                                    variant={selectedSkills.includes(skill) ? "default" : "outline"}
+                                    className="cursor-pointer hover:bg-purple-600"
+                                    onClick={() => handleSkillSelect(skill)}
+                                  >
+                                    {skill}
+                                  </Badge>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {Object.keys(filteredSkills).length === 0 && (
+                          <p className="text-sm text-gray-400 text-center py-2">
+                            Aucune compétence trouvée
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {(selectedMainType || selectedSubType || selectedSkills.length > 0) && (
+                    <Button
+                      variant="ghost"
+                      className="w-full text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                      onClick={clearFilters}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Réinitialiser les filtres
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <div className="relative w-60">
               <div 
                 className="flex items-center border border-purple-500/30 rounded-md bg-black/50 p-2 pl-3 cursor-text w-full"
@@ -379,107 +624,36 @@ export default function ExpertProfiles() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {filteredExperts.map((expert) => (
-                  <Card 
-                    key={expert.uid} 
-                    className="bg-purple-900/10 border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col"
-                  >
-                    {/* En-tête avec photo et nom */}
-                    <div className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-full overflow-hidden bg-purple-950 flex-shrink-0">
-                          {expert.photoURL ? (
-                            <img 
-                              src={expert.photoURL} 
-                              alt={expert.displayName} 
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-purple-800">
-                              <User className="h-6 w-6 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="overflow-hidden">
-                          <h3 className="text-lg font-semibold truncate">{expert.displayName}</h3>
-                          <div className="flex items-center gap-1 text-sm text-gray-400">
-                            <Star className="h-3 w-3 text-yellow-500" />
-                            <span>{expert.rating.toFixed(1)}</span>
-                            <span className="mx-1">•</span>
-                            <Briefcase className="h-3 w-3 text-gray-400" />
-                            <span>{expert.projectCount} projets</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Contenu */}
-                    <div className="p-4 pt-0 flex-grow">
-                      {/* Compétences */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {expert.skills && expert.skills.slice(0, 3).map((skill, index) => (
-                          <span 
-                            key={index} 
-                            className="bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full text-xs text-purple-300"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {expert.skills && expert.skills.length > 3 && (
-                          <span className="text-xs text-gray-500">+{expert.skills.length - 3} autres</span>
-                        )}
-                      </div>
-                      
-                      {/* Description */}
-                      <p className="text-sm text-gray-400 line-clamp-3">
-                        {expert.bio}
-                      </p>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="mt-auto p-4 pt-3 border-t border-purple-500/10">
-                      <div className="flex gap-2">
-                        <Button 
-                          className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                          onClick={() => handleViewProfile(expert.uid)}
-                        >
-                          Voir profil
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="border-purple-500/20 text-purple-300 hover:bg-purple-400/10"
-                          onClick={() => handleContact(expert.uid, expert.displayName)}
-                        >
-                          Contacter
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
+                  <ProfileCard
+                    key={expert.uid}
+                    profile={expert}
+                    onViewProfile={() => handleViewProfile(expert.uid)}
+                    onContact={(name) => handleContact(expert.uid, name)}
+                  />
                 ))}
               </div>
             )}
-            
+
             {/* Pagination */}
-            {!isLoading && filteredExperts.length > 0 && (
+            {!isLoading && filteredExperts.length > 0 && hasMore && (
               <div className="flex justify-center mt-8 gap-4">
-                {hasMore && (
-                  <Button
-                    onClick={loadMoreExperts}
-                    variant="outline"
-                    className="border-purple-500/30 text-purple-300"
-                    disabled={isLoadingMore}
-                  >
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Chargement...
-                      </>
-                    ) : (
-                      <>Afficher plus d'experts</>
-                    )}
-                  </Button>
-                )}
+                <Button
+                  onClick={loadMoreExperts}
+                  variant="outline"
+                  className="border-purple-500/30 text-purple-300"
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    <>Afficher plus d'experts</>
+                  )}
+                </Button>
               </div>
             )}
           </>
