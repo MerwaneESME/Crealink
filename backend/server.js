@@ -8,17 +8,16 @@ const jwt = require('jsonwebtoken');
 dotenv.config();
 
 // Initialiser Firebase Admin
-const serviceAccount = require('./serviceAccountKey.json');
 try {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.applicationDefault()
   });
 } catch (error) {
   console.log('Firebase déjà initialisé');
 }
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = parseInt(process.env.PORT) || 8080;
 
 // Middleware
 app.use(cors());
@@ -61,6 +60,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erreur serveur' });
 });
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Serveur démarré sur le port ${port}`);
 }); 
